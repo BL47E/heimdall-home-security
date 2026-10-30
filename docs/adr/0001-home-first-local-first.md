@@ -1,0 +1,3 @@
+# Home-first, local-first product scope
+
+Heimdall targets personal home systems such as NAS devices, routers, and a small number of hosted services. Version one will receive selected events, explain local rules, keep history locally, and notify the owner; it will complement vendor security controls and focused tools rather than recreate a full SIEM, case-management platform, or SOAR suite. We chose this scope to keep deployment and maintenance reasonable for a home user while preserving a useful cross-device view. External enrichment is optional, and Heimdall will not make changes to devices or network controls without explicit owner approval.

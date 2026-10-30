@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Heimdall Mini-Project Rubric Full-Marks Guide</title>
+  <style>
+    @page { size: A4; margin: 15mm 15mm 16mm; }
+    * { box-sizing: border-box; }
+    body { color: #111; background: #fff; font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; line-height: 1.34; margin: 0; }
+    h1, h2, h3 { color: #111; margin: 0 0 8px; }
+    h1 { font-size: 24pt; text-align: center; margin-top: 35mm; }
+    h2 { font-size: 16pt; border-bottom: 1px solid #555; padding-bottom: 4px; margin-top: 0; }
+    h3 { font-size: 12pt; margin-top: 12px; }
+    p { margin: 6px 0 8px; }
+    ul, ol { margin: 5px 0 9px 20px; padding: 0; }
+    li { margin: 3px 0; }
+    a { color: #111; text-decoration: underline; }
+    .cover-subtitle { text-align: center; font-size: 15pt; margin: 10px 0 28px; }
+    .cover-meta { width: 78%; margin: 0 auto; border-collapse: collapse; }
+    .cover-meta td { border: 1px solid #777; padding: 7px 9px; }
+    .cover-meta td:first-child { font-weight: bold; width: 35%; }
+    .note { border-left: 4px solid #444; padding: 7px 10px; background: #f1f1f1; margin: 9px 0; }
+    .page-break { page-break-before: always; }
+    .avoid-break { page-break-inside: avoid; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; page-break-inside: avoid; }
+    th, td { border: 1px solid #888; padding: 5px 6px; vertical-align: top; }
+    th { background: #e9e9e9; font-weight: bold; }
+    .tight { font-size: 8.8pt; line-height: 1.18; }
+    .tight th, .tight td { padding: 3px 4px; }
+    .score { text-align: center; width: 9%; white-space: nowrap; }
+    .rubric-table td:first-child { width: 23%; font-weight: bold; }
+    .rubric-table td:nth-child(2) { width: 29%; }
+    .rubric-table td:nth-child(3) { width: 33%; }
+    .rubric-table td:nth-child(4) { width: 15%; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .box { border: 1px solid #888; padding: 8px; margin: 7px 0; page-break-inside: avoid; }
+    .box h3 { margin-top: 0; }
+    code { font-family: "Courier New", monospace; font-size: 0.9em; }
+    .footer-note { font-size: 8.5pt; color: #444; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <section class="avoid-break">
+    <h1>Heimdall</h1>
+    <div class="cover-subtitle">Mini-Project Evaluation Rubrics<br>Full-Marks Teaching and Preparation Guide</div>
+    <table class="cover-meta">
+      <tr><td>Course</td><td>Linux &amp; Shell Programming (CSET-213)</td></tr>
+      <tr><td>Project</td><td>Heimdall: Home Security Overview for Personal NAS and Home Servers</td></tr>
+      <tr><td>Students</td><td>Anirdeep Das (S25CSEU1973)<br>Harshit Gupta (S25CSEU1971)</td></tr>
+      <tr><td>Faculty</td><td>Vimal Kumar</td></tr>
+      <tr><td>Maximum marks</td><td>30</td></tr>
+      <tr><td>Goal</td><td>Show a feasible, evidence-backed design and a working first release</td></tr>
+    </table>
+    <div class="note"><strong>How to use this guide:</strong> align the proposal, implementation, report, website, and demonstration. Mark every feature as implemented, simulated, or planned, and only claim behavior supported by evidence.</div>
+  </section>
+
+  <section class="page-break">
+    <h2>1. Project in one page</h2>
+    <h3>Audience and problem</h3>
+    <p>Heimdall is for a home NAS or home-server owner who wants selected security events from devices in one place, with a plain explanation of what matched and what to review. The user wants useful context without maintaining a full security operations stack.</p>
+    <h3>Proposed flow</h3>
+    <table><tr><th>Stage</th><th>What happens</th><th>Evidence to show</th></tr>
+      <tr><td>1. Receive</td><td>A supported NAS or router forwards syslog events to Heimdall over the local network.</td><td>Source configuration and sample messages.</td></tr>
+      <tr><td>2. Normalize</td><td>Heimdall parses selected fields into a documented internal event shape.</td><td>Valid and malformed input examples.</td></tr>
+      <tr><td>3. Detect and group</td><td>Local rules find a small set of patterns, beginning with repeated failed logins, and group related events.</td><td>Rule ID, matched facts, grouped event references.</td></tr>
+      <tr><td>4. Explain</td><td>The alert shows its severity, evidence, and a suggested next step.</td><td>One example at each supported severity.</td></tr>
+      <tr><td>5. Store and notify</td><td>Alerts are kept in SQLite; configured alerts can be sent to an optional notification provider.</td><td>Restart-persistent record and notification delivery log.</td></tr>
+    </table>
+    <div class="note"><strong>Scope boundary:</strong> the first release recommends actions for the owner. It does not block addresses, lock accounts, delete files, or change NAS configuration.</div>
+  </section>
+
+  <section class="page-break">
+    <h2>2. Problem analysis — 6 marks</h2>
+    <table class="rubric-table"><tr><th>Three-mark sub-criterion</th><th>What “Excellent” means</th><th>What Heimdall must show</th><th>Mark-losing mistake</th></tr>
+      <tr><td>Problem domain identification and analysis</td><td>A specific user and problem are supported by a clear example.</td><td>Show how a home owner currently checks NAS, router, and service alerts separately, and how Heimdall would group and explain a selected event pattern.</td><td>Calling the problem only “cybersecurity” or claiming an unmeasured reduction in response time.</td></tr>
+      <tr><td>Existing systems and feasibility</td><td>Existing systems are compared fairly and the project scope is achievable.</td><td>Compare vendor NAS checks, Wazuh, and CrowdSec by purpose. Explain Heimdall's intended niche as a simple cross-device home view.</td><td>Claiming Heimdall replaces a production SIEM or has fewer resource needs before measuring them.</td></tr>
+    </table>
+    <h3>Existing-system comparison</h3>
+    <table><tr><th>System</th><th>Strength</th><th>Heimdall's intended relationship</th></tr>
+      <tr><td>NAS security features</td><td>Device-specific checks and reports.</td><td>Complement them with selected events from other home systems.</td></tr>
+      <tr><td>Wazuh</td><td>Broad SIEM/XDR monitoring and endpoint coverage.</td><td>Provide a narrower home-server experience, without promising parity.</td></tr>
+      <tr><td>CrowdSec</td><td>Log-based attack scenarios and optional enforcement through bouncers.</td><td>Potentially consume its alerts; keep Heimdall's first response path owner-controlled.</td></tr>
+      <tr><td>TheHive / DFIR-IRIS / Shuffle</td><td>Investigation management and security workflow automation.</td><td>Keep personal alert review and notification simpler.</td></tr>
+    </table>
+  </section>
+
+  <section class="page-break">
+    <h2>3. Project design — 6 marks</h2>
+    <h3>Measurable first-release objectives</h3>
+    <ol>
+      <li>Receive and normalize the first documented NAS or router syslog format, with source identity and timestamps visible in every accepted event.</li>
+      <li>Demonstrate each first-release authentication rule with sample events, and show the matched facts and reason for the resulting severity.</li>
+      <li>Persist alerts in SQLite across a container restart and demonstrate offline operation with no API key or external service required.</li>
+    </ol>
+    <h3>Methodology</h3>
+    <ol>
+      <li>Choose one target device and document the events it can forward.</li>
+      <li>Define the normalized event and alert shapes before implementation.</li>
+      <li>Receive and validate syslog input; bound message sizes and reject malformed messages safely.</li>
+      <li>Apply transparent local rules and group duplicate events.</li>
+      <li>Persist the event and alert, then display the rule, evidence, severity, and recommendation.</li>
+      <li>Test the same examples offline; add notification and optional enrichment only after local triage works.</li>
+    </ol>
+    <div class="box"><h3>Severity guidance</h3><p>Use a small severity scale and make every level traceable to matched facts. Severity is a project rule, not a universal measure of threat. Missing context should be visible rather than treated as proof of safety.</p></div>
+  </section>
+
+  <section class="page-break">
+    <h2>4. Implementation and demonstration — 6 marks</h2>
+    <table class="rubric-table"><tr><th>Three-mark sub-criterion</th><th>What “Excellent” means</th><th>What Heimdall must show</th><th>Mark-losing mistake</th></tr>
+      <tr><td>Design and implementation alignment</td><td>The working system matches the stated scope and contracts.</td><td>Use the same source names, event fields, rule IDs, severity terms, and boundaries in the report, code, website, and demo.</td><td>Describing future integrations as implemented.</td></tr>
+      <tr><td>Module implementation and demonstration</td><td>Core behavior runs from input to stored alert and is demonstrated with controlled cases.</td><td>Show valid and malformed syslog, a rule match, grouped evidence, persistent SQLite history, and offline mode.</td><td>Showing only the browser simulation as proof of live event handling.</td></tr>
+    </table>
+    <h3>Minimum demonstration matrix</h3>
+    <table class="tight"><tr><th>Case</th><th>Input</th><th>Expected evidence</th></tr>
+      <tr><td>Routine event</td><td>Sample message not matching a configured rule.</td><td>Stored event; no alert or notification.</td></tr>
+      <tr><td>Repeated failed logins</td><td>Controlled burst from one test address.</td><td>Rule, count/window, severity explanation, grouped event references.</td></tr>
+      <tr><td>Failure then success</td><td>Controlled sequence from sample events.</td><td>Relevant sequence and explanation are visible.</td></tr>
+      <tr><td>Malformed input</td><td>Invalid timestamp, oversized message, or incomplete record.</td><td>Safe rejection or parse error; service remains available.</td></tr>
+      <tr><td>Offline run</td><td>Use mock events with external lookups disabled.</td><td>Local rules, UI, and persistence still work.</td></tr>
+      <tr><td>Notification failure</td><td>Unavailable or invalid test destination.</td><td>Alert remains stored and delivery failure is visible.</td></tr>
+    </table>
+  </section>
+
+  <section class="page-break">
+    <h2>5. Planned tools and design rationale</h2>
+    <table class="tight"><tr><th>Tool or concept</th><th>Purpose</th><th>Status</th></tr>
+      <tr><td>Python</td><td>Application runtime, parsers, local rules, and provider adapters.</td><td>Planned</td></tr>
+      <tr><td>Bash</td><td>Small installation or launcher helpers.</td><td>Planned</td></tr>
+      <tr><td>Docker Compose</td><td>Single-service home-server deployment.</td><td>Planned</td></tr>
+      <tr><td>SQLite</td><td>Local event, alert, and cache storage.</td><td>Planned</td></tr>
+      <tr><td>Syslog</td><td>Initial network input path from a selected NAS or router.</td><td>Planned</td></tr>
+      <tr><td>Local web interface</td><td>Alert review, explanations, filters, and service status.</td><td>Planned</td></tr>
+      <tr><td>Notification provider</td><td>Optional delivery of configured alert levels.</td><td>Planned</td></tr>
+      <tr><td>Threat-intelligence provider</td><td>Optional lookups for selected indicators only.</td><td>Later, opt-in</td></tr>
+    </table>
+    <div class="note"><strong>Resource claims:</strong> measure CPU, memory, and disk growth on representative low-power hardware before publishing numeric limits or claiming performance advantages.</div>
+  </section>
+
+  <section class="page-break">
+    <h2>6. Project report and communication — 12 marks</h2>
+    <h3>Report checklist</h3>
+    <ul>
+      <li>Explain the home user, the event sources, the problem, and the product boundary.</li>
+      <li>Compare existing systems by their documented roles and cite primary documentation.</li>
+      <li>Separate implemented, simulated, and planned behavior throughout the report.</li>
+      <li>Include the event contract, detection rules, severity explanations, test cases, results, limitations, and privacy decisions.</li>
+      <li>Do not claim a measured resource footprint, lower false-positive rate, or time saving without test evidence.</li>
+    </ul>
+    <h3>Presentation sequence</h3>
+    <ol>
+      <li>Introduce the home NAS user and the problem of scattered security events.</li>
+      <li>Show existing tools and explain Heimdall's narrower intended role.</li>
+      <li>Demonstrate event intake, one local rule, the explanation, and stored history.</li>
+      <li>Show offline mode and explain owner approval for any response.</li>
+      <li>Close with measured results, current limitations, and the next implementation phase.</li>
+    </ol>
+    <div class="note"><strong>Current repository state:</strong> the interactive site is a browser simulation. It does not read syslog, call external services, write to SQLite, or send notifications.</div>
+  </section>
+
+  <section class="page-break">
+    <h2>7. Readiness checklist and references</h2>
+    <ul>
+      <li>□ The first target NAS and syslog format are named.</li>
+      <li>□ Each detection has a rule ID, sample input, explanation, and expected outcome.</li>
+      <li>□ The team can distinguish event, alert, recommendation, and response action.</li>
+      <li>□ External lookups are optional, and no raw log is sent by default.</li>
+      <li>□ No device or firewall change occurs without owner approval.</li>
+      <li>□ Resource and performance statements are supported by measurements.</li>
+    </ul>
+    <ol>
+      <li>Synology, <a href="https://kb.synology.com/en-au/DSM/help/DSM/SecurityScan/securityscan_desc?version=6">Security Advisor documentation</a>.</li>
+      <li>TrueNAS, <a href="https://www.truenas.com/docs/scale/systemsettings/audit/auditing/">Using Audit Logs</a> and <a href="https://www.truenas.com/docs/solutions/optimizations/security/">Security Recommendations</a>.</li>
+      <li>Wazuh, <a href="https://documentation.wazuh.com/current/quickstart.html">Quickstart and hardware requirements</a>.</li>
+      <li>CrowdSec, <a href="https://docs.crowdsec.net/u/getting_started/intro/">Security Engine overview</a>.</li>
+      <li>SQLite, <a href="https://www.sqlite.org/whentouse.html">Appropriate Uses for SQLite</a>.</li>
+      <li>Docker, <a href="https://docs.docker.com/compose/">Docker Compose documentation</a>.</li>
+      <li>Heimdall, <a href="../HEIMDALL_BLUEPRINT.md">product and technical blueprint</a>.</li>
+    </ol>
+  </section>
+</body>
+</html>
