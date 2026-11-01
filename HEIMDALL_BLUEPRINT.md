@@ -1,5 +1,9 @@
 # Heimdall: Home Security Overview
 
+## College milestone scope amendment
+
+The agreed college milestone uses shell scripts, a terminal menu and commands, local files and two Ubuntu ARM64 VMs. Its ten-day delivery priorities and planned behavior are recorded in [the college milestone plan](docs/college-milestone-plan.md) and [ADR 0002](docs/adr/0002-shell-first-college-milestone.md). Those documents govern this milestone where they differ from the broader architecture below. The supplied evaluation rubric is mapped in [evaluation alignment](docs/evaluation-alignment.md); the supplied idea template is recorded there, while its applicability to the final report, title-page dates and any separate course requirements remain open for faculty confirmation. Automatic SSH source blocking is a last-priority, VM-only proposal that requires detailed design review and tested recovery before activation. The remaining sections describe the broader product direction, not implemented capabilities.
+
 ## Product direction
 
 Heimdall is a planned, local-first security assistant for personal home systems: NAS devices, routers, and a small number of services hosted at home. It should help an owner answer three questions:

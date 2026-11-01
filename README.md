@@ -1,60 +1,93 @@
-# Heimdall
+<div align="center">
 
-**A clear, local security overview for a home server or NAS, without running a full SOC stack.**
+# 🛡️ Heimdall
 
-Heimdall is a planned, lightweight home security assistant. It will collect security events from a NAS, router, and selected services, explain which events deserve attention, and keep a local history of what happened. Its first release is intended for people who want actionable context without managing a full security operations platform.
+### Explainable SSH security monitoring with Linux shell scripts
 
-## Why Heimdall
+A college project for Linux & Shell Programming (CSET-213).
 
-NAS products already provide useful security checks for their own systems. Heimdall is designed to add a small cross-device view: receive events over syslog, group related activity, explain the matching rule and severity, and optionally enrich selected indicators. Local rules and history should work without internet access. External lookups will be opt-in.
+**[Milestone plan](docs/college-milestone-plan.md)** · **[Build checklist](checklist.md)** · **[Evaluation requirements](docs/evaluation-alignment.md)** · **[Architecture decision](docs/adr/0002-shell-first-college-milestone.md)**
 
-Heimdall complements tools such as Synology Security Advisor, TrueNAS auditing, and CrowdSec. It is not intended to replace endpoint detection, a SIEM, an IDS, or the NAS vendor's security controls.
+</div>
 
-## Version one
+## Current status
 
-The initial scope is deliberately small:
+**Planning complete enough to begin development; the live software is not implemented yet.** This repository contains the agreed plan, architecture decisions, supplied academic documents and earlier browser simulations. There is no installed `heimdall` command or working monitoring service yet.
 
-- Receive syslog events from a home NAS or router.
-- Detect a few understandable patterns, beginning with repeated failed logins and suspicious activity around authentication.
-- Group repeated events, explain why an alert was raised, and assign a transparent severity.
-- Keep alerts and an enrichment cache in a local SQLite database.
-- Send optional notifications through a configurable provider.
-- Run in mock/offline mode without API keys or internet access.
-- Recommend next steps; require the owner to approve changes to devices or network controls.
+The current milestone is a shell-first, terminal-based SSH monitor on Ubuntu ARM64. The broader NAS/router product in [the blueprint](HEIMDALL_BLUEPRINT.md) remains future direction. [ADR 0002](docs/adr/0002-shell-first-college-milestone.md) records this scope decision.
 
-The first release will not automatically block addresses, delete files, or change NAS configuration.
+## What the first version is planned to do
+
+- Watch SSH login records in the background, start at boot and attempt bounded recovery after a crash.
+- Raise an explainable alert after **four failures from the same IP in a rolling five-minute window**, across usernames.
+- Group a continuous burst until five minutes without another failure. Show the source, timeline, matched rule and recommendations.
+- Summarize a successful login with matching preceding failures for the same user and IP when the data supports it.
+- Offer a terminal menu and direct commands for status, alerts, investigation, review and report export.
+- Preserve local alert history for **60 days** by default, including review history across restarts. Daily cleanup preserves pending delivery and active block records.
+- Send optional Discord webhook messages. Queue failed deliveries and send a grouped list when Discord becomes reachable again.
+- Optionally enrich eligible public IPs with VirusTotal context. Missing results mean unknown, and zero flags mean no flags found. Local processing works offline.
+- Provide a guided demonstration that clearly labels prepared data and simulated actions.
+
+**SSH blocking is the last implementation priority.** It is limited to the test VM and requires a reviewed design plus tested console recovery before activation. The intended block applies only to further SSH connections from the source IP; manual unblock requires confirmation. Reviewing an alert does not unblock it. Internet outages do not trigger quarantine.
+
+## Test environment
+
+One MacBook M4 Air with 16 GB RAM will host two Ubuntu ARM64 virtual machines:
+
+1. **Heimdall VM:** SSH service, shell monitor, terminal management and local records.
+2. **Test VM:** controlled SSH attempts over a private virtual network.
+
+Separate outbound connectivity supports Discord and optional VirusTotal. Private VM addresses will not be sent to VirusTotal; the guided reputation demonstration uses labelled simulated results. Choose the VM application, Ubuntu release and actual SSH log input during setup.
 
 ## Planned stack
 
-- Python application, with Bash limited to a small launcher or setup helper.
-- Docker Compose deployment, packaged for the target CPU architectures.
-- SQLite for local alert history, deduplication, and enrichment cache.
-- Syslog as the first input path; additional source adapters can follow.
-- A small server-rendered web interface and API.
-- Optional notification and threat-intelligence providers behind replaceable interfaces.
+| Area | College milestone |
+|---|---|
+| Main language | Linux shell scripts |
+| Supporting tools | Common Linux commands, curl and jq |
+| Management | Terminal menu and command interface |
+| Background operation | Linux service manager |
+| Storage | Local files with restricted permissions and safe writes |
+| Notifications | Optional Discord webhook |
+| Reputation context | Optional VirusTotal API v3 with caching and limits |
+| Deployment | Ubuntu ARM64 VMs |
 
-These are design choices, not implemented components yet.
+Python, SQLite, a web dashboard and Docker Compose belong to the broader future architecture, not prerequisites for this milestone.
 
-## Project status
+## Start building
 
-This repository currently contains the product blueprint, interactive documentation, proposal material, and evaluation guide. The interactive console and IOC defanger are browser simulations. Heimdall does not yet receive live logs, query threat-intelligence services, persist alerts, or send notifications.
+Follow [checklist.md](checklist.md) and the [GitHub build backlog](docs/build-backlog.md). Build in this order:
 
-## Start here
+1. VM setup, representative SSH logs and sample fixtures.
+2. Live parsing, rolling-window detection and explanations.
+3. Persistent investigations, CLI, TUI and background service.
+4. Discord delivery and outage recovery.
+5. Optional VirusTotal context and readable reports.
+6. Guided demo, evidence and rehearsal; real blocking only after its design and recovery gates pass.
 
-- [Product and technical blueprint](HEIMDALL_BLUEPRINT.md)
-- [Interactive project guide](docs/index.html)
-- [Evaluation guide](docs/Heimdall_Rubric_Full_Marks_Guide.html)
-- [Architecture decision record](docs/adr/0001-home-first-local-first.md)
-- [Glossary](GLOSSARY.md)
+The target is ten working days from project start, not a confirmed submission date. Collect report and test evidence throughout development. Reconcile the deadline, final-report format and title-page dates with the professor when available.
 
-Open `docs/index.html` directly in a browser to explore the simulated workflow. It does not need a server.
+## Academic documents
 
-## Roadmap
+- [Supplied 30-mark rubric](docs/reference/evaluation-rubric.docx)
+- [Supplied idea template](docs/reference/idea-template.docx)
+- [Criteria, formatting and evidence mapping](docs/evaluation-alignment.md)
 
-1. Define the alert contract, supported syslog format, and safe configuration defaults.
-2. Implement syslog ingestion, normalization, and a small set of local rules.
-3. Add event grouping, explainable severity, SQLite history, and offline demonstrations.
-4. Add notifications and optional, rate-limited indicator enrichment.
-5. Package a low-maintenance Docker Compose install and document supported NAS targets.
+The idea template allows at most three realistic quantified objectives and requires a Gantt chart. The rubric awards 6 marks each for analysis, design, implementation, report and communication. Keep the final design consistent with working modules and record both students' actual contributions.
 
-See the [full blueprint](HEIMDALL_BLUEPRINT.md) for boundaries, architecture, and acceptance criteria.
+Whether the idea template also governs the final report, the submission date, presentation duration and correct title-page dates remain open for faculty confirmation.
+
+## Earlier reference artifacts
+
+[Browser simulation](docs/index.html), [HTML guide](HEIMDALL_BLUEPRINT.html), earlier filled idea documents and the full-marks guide under `docs/` predate the current milestone. They are reference material and may describe broader or older behavior; they do not establish implemented features or replace the supplied rubric. The current plan and evaluation mapping take precedence.
+
+The browser simulation can be opened directly from disk; it does not run the Linux monitor or send real notifications.
+
+## Academic context and authors
+
+- Anirdeep Das — S25CSEU1973
+- Harshit Gupta — S25CSEU1971
+- Faculty guide: Vimal Kumar
+- Course: Linux & Shell Programming (CSET-213)
+
+Use the [glossary](GLOSSARY.md) for project terminology and [AGENTS.md](AGENTS.md) for contribution guidance. Work is tracked in this repository's GitHub Issues.
