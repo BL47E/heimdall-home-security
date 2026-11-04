@@ -1,0 +1,4 @@
+interface:
+  display_name: "Subagent swarm"
+  short_description: "Coordinate workers with an integrating handler"
+  default_prompt: "Use $subagent-swarm to coordinate this task."
