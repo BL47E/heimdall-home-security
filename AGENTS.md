@@ -6,6 +6,10 @@ For the current college milestone, read `docs/college-milestone-plan.md`, `check
 
 Use the terms in `GLOSSARY.md`. Read applicable decisions in `docs/adr/` before changing product boundaries or deployment choices.
 
+## Learning and collaboration
+
+The owner is building this kind of project for the first time and is learning the tools and concepts as the project progresses. Assume no prior knowledge of Linux administration, SSH monitoring, GitHub workflows, CI/CD or software architecture. Explain new terms in plain language when they first appear, use small examples from Heimdall, and connect each step to its purpose. When asking for a decision, explain the practical choices and recommend one with a reason. For commands the owner runs, explain where to run them, what they do and what the result means. Teach in manageable steps so the owner can understand and explain the project themselves.
+
 ## Agent skills
 
 ### Issue tracker

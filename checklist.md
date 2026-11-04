@@ -4,6 +4,8 @@ Current scope: [college milestone](docs/college-milestone-plan.md), [ADR 0002](d
 
 Status: documentation and browser simulation exist; all runtime modules below are planned. GitHub Issues are the implementation tracker; see the [build backlog](docs/build-backlog.md) for the initial work packages. Check an item only after recording its implementation and verification evidence in the corresponding issue. Track actual contribution by both students.
 
+Progress reconciled on 2026-11-04 against [the diary](diary.md), [lab verification evidence](https://github.com/BL47E/heimdall-home-security/issues/1#issuecomment-6632267553) and the [SSH contract discussion](https://github.com/BL47E/heimdall-home-security/issues/9). Checked planning items below record agreed choices, not working runtime behavior. Earlier lab observations do not establish the VMs' current power state or addresses.
+
 ## Ready to start
 
 - [x] Record shell-first scope, priorities, detection rules, notification behavior and response limits.
@@ -11,11 +13,25 @@ Status: documentation and browser simulation exist; all runtime modules below ar
 - [x] Keep faculty questions open: final report format, title-page dates, deadline, presentation duration and any separate constraints.
 - [ ] Agree meaningful ownership with the teammate and record actual contributions throughout the project.
 
+## Workflow and SSH contract planning
+
+- [x] Create the [Wayfinder decision map](https://github.com/BL47E/heimdall-home-security/issues/8), four native child tickets and dependencies; keep implementation issues separate.
+- [x] Record the owner's beginner learning preference in `AGENTS.md`.
+- [x] Agree the initial source and authentication scope: blue's SSH journal and explicit password successes/failures; supporting messages do not add attempts.
+- [x] Agree Event facts, restricted local original-message evidence and short information-availability notes; preserve incomplete evidence without inventing missing facts.
+- [ ] Inspect journal record identity and timestamp precision, obtain exact sanitized examples, and finalize [the SSH log and event contract](https://github.com/BL47E/heimdall-home-security/issues/9).
+- [ ] Resolve the dependent time-window/replay and durable-state decisions.
+- [ ] Agree CI gates and manual deployment evidence, then implement and verify the selected checks. CI workflows are not implemented.
+
 ## 1. Ubuntu lab and log contract — Day 1
 
-- [ ] Set up two Ubuntu ARM64 VMs with console recovery and a private test network.
-- [ ] Verify controlled SSH access and separate outbound access where configured.
-- [ ] Capture sanitized examples of failed and successful SSH login records and identify the actual source, timestamp format and read permissions.
+- [x] Set up two Ubuntu ARM64 VMs with Host-Only test adapters and separate Shared adapters; record observed environment and addresses in the diary.
+- [ ] Demonstrate and record recovery through the VM console. Shared networking is not full isolation from the host or LAN.
+- [x] Verify controlled red-to-blue SSH access over Host-Only, including host-key checking and source/destination addresses.
+- [x] Record separate outbound routes through the Shared adapters.
+- [ ] Verify and record separate outbound connectivity where configured.
+- [x] Inspect real successful and invalid-user failed-password records; identify `journalctl -u ssh`, observed `sshd-session` messages, displayed timestamps/time zone and non-root read access in the tested account.
+- [ ] Export exact sanitized successful, invalid-user and existing-account wrong-password samples; screen transcriptions are not reusable fixtures.
 - [ ] Document dependencies, setup and teardown. Capture three-failure, fourth-failure, expired-window, multiple-IP, missing-field and malformed examples.
 
 Acceptance: representative real logs and repeatable offline samples are available; tests remain on the VM network. Record chosen versions and environment rather than guessing log paths.

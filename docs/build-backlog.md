@@ -2,6 +2,8 @@
 
 GitHub Issues are the implementation tracker. This index links the initial work packages; issue comments hold current ownership, status and verification evidence. Ready-for-human items cover lab/team work; dependent implementation packages begin as needs-triage until their inputs are settled.
 
+Design decisions are tracked separately in [Chart the shell-first college milestone and CI decisions](https://github.com/BL47E/heimdall-home-security/issues/8). Query its native child issues for open decisions; see [Wayfinding operations](agents/issue-tracker.md#wayfinding-operations). The [development diary](../diary.md) records dated observations and the [checklist](../checklist.md) distinguishes completed preparation from planned runtime behavior.
+
 - [Prepare the two-VM Ubuntu ARM64 lab and capture SSH log fixtures](https://github.com/BL47E/heimdall-home-security/issues/1) — Day 1.
 - [Implement shell SSH parsing and rolling-window alerts](https://github.com/BL47E/heimdall-home-security/issues/2) — Days 2–3.
 - [Add persistent investigations, CLI/TUI and background service management](https://github.com/BL47E/heimdall-home-security/issues/3) — Days 4–5.

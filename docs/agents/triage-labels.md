@@ -1,5 +1,7 @@
 # Triage labels
 
+These labels apply to implementation work. Wayfinder maps and decision tickets use only `wayfinder:` labels; see [Wayfinding operations](issue-tracker.md#wayfinding-operations).
+
 | Role | GitHub label | Meaning |
 |---|---|---|
 | needs-triage | `needs-triage` | Maintainer evaluation is needed. |
