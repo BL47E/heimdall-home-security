@@ -28,4 +28,4 @@ The integration handler ran `python3 -m unittest tests.test_web -v`: **9 tests p
 
 ## Limits
 
-The dashboard redesign remains local source work. The blue VM's earlier CLI deployment is separate; this entry does not claim a new VM dashboard deployment, reboot recovery, firewall changes or provider integration. Browser checks do not replace a full accessibility or concurrent-session audit.
+The checks above used synthetic state. The later deployment entry records authenticated HTTP verification against blue’s live state and the deployed sidebar update. Boot recovery, provider integration, and full accessibility and concurrent-session audits remain open. [Live deployment and sidebar evidence](../../diary.md)

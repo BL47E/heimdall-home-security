@@ -1,5 +1,10 @@
 # Heimdall development diary
 
+## 2026-11-05 — Sidebar and lab handoff
+
+- Commit `4d2b389` removes the persistent sidebar underline and the animated hover line. The active link uses brighter, medium-weight text, hover brightens the label, and keyboard focus shows an outline. Blue served the updated stylesheet, and browser checks verified these states at 390, 768 and 1360 pixels.
+- At this documentation checkpoint, Parallels reported both Ubuntu VMs stopped and the dashboard request timed out. Resume by starting blue and following the manual startup steps in the [runbook](docs/runbook.md). Start red for the controlled SSH alert demonstration. Boot startup and crash recovery still need verification.
+
 ## 2026-11-05 — Dashboard deployed and verified on blue
 
 - Compared blue's ED25519 SSH fingerprint from the Parallels console with the Host-Only SSH endpoint at `10.37.129.3`. The prepared archive passed SHA-256 verification on the Mac and blue before extraction into `~/heimdall/releases/0.1.0.lzc7GK/heimdall-0.1.0`. The previous release and live state were retained.
@@ -8,10 +13,9 @@
 - The previous CLI launcher checked for a monitor process under its own release path and therefore reported an error for the healthy new process. Saved it as `~/heimdall/heimdall.before-dashboard` and pointed `~/heimdall/heimdall` at the dashboard's release. The updated CLI and dashboard agreed on status.
 - On blue, all 28 Python tests and shell configuration checks passed. The dashboard is running manually at `http://10.37.129.3:8765`. HTTP checks exercised the live deployment, and the earlier synthetic browser checks cover rendering and interactions. Boot/crash recovery and the controlled red-to-blue alert demonstration remain open.
 
+## 2026-11-05 — Pre-deployment handoff
 
-## 2026-11-05 — Next-session handoff
-
-Start here for current state; the dated entries below describe their own checkpoints and may say that work was uncommitted or unimplemented at that earlier time. [The checklist](checklist.md) has been reconciled with the actual implementation and remaining evidence.
+This entry records the state before deployment. The entries above record the deployment and subsequent sidebar update. [The checklist](checklist.md) has been reconciled with the actual implementation and remaining evidence.
 
 ### Saved work and current Git state
 

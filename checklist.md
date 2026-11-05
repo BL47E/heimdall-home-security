@@ -6,16 +6,11 @@ Status: CLI and dashboard 0.1.0 are deployed on blue. Live status, preserved ale
 
 Progress reconciled on 2026-11-05 against [the diary](diary.md), [CLI/VM verification](docs/verification/2026-11-04-cli-blue.md), [dashboard verification](docs/verification/2026-11-05-dashboard.md) and [cleanup issue 14](https://github.com/BL47E/heimdall-home-security/issues/14). Planning checkboxes record agreed choices; implementation checkboxes identify their evidence below. The VM power, addresses and blue monitor status were rechecked live on 2026-11-05; see the diary. Earlier lab observations do not establish current state beyond that checkpoint.
 
-## Pre-deployment checkpoint — 2026-11-05
+## Resume the lab
 
-The [dashboard deployment entry](diary.md) supersedes the VM and package status in this checkpoint.
-
-- Latest implementation commit: `82b5bd0` on `main`, including cleanup and the panel design guide. At handoff inspection, `HEAD` matched the locally recorded `origin/main`; this documentation update is a subsequent local change.
-- Latest completed runtime checks: **19 monitor tests plus shell configuration checks and 9 real HTTP integration tests**. Cleanup also passed syntax/structure, source-permission, package and local-link checks; this documentation update does not rerun the runtime suite.
-- The Mac demo dashboard server on port 8765 has stopped (exit 143); no listener was found at handoff. Restart explicitly with separate synthetic state if needed; [runbook](docs/runbook.md) has the commands.
-- Blue's earlier manually deployed CLI remains the last deployed VM build. On 2026-11-05, Parallels and Peekaboo confirmed both Ubuntu VMs running; blue was `10.37.129.3`, red `10.37.129.4`, and blue's monitor reported running with journal coverage available (24 events, 1 alert needing review). SSH port 22 responded at both Host-Only addresses. The current dashboard has not been deployed there.
-- A current-source package was built at `/tmp/heimdall-current-release/heimdall-0.1.0.tar.gz` (SHA-256 `bfb500fd31f9f00e52947ea8dab6ba85dfc1cc82c2f111037d424fcd5be42666`); the older `dist/` package was preserved. Deployment is pending authorized SSH access; the Mac SSH agent had no identities. Kali was stopped.
-- Recommended next architecture work: configuration consistency. The survey found repeated validation limits and different handling of an empty patch in the CLI and HTTP paths. This refactor has not been implemented.
+- At the documentation handoff, Parallels reported blue and red stopped. Start blue, confirm its current Host-Only address and start the monitor and dashboard manually. [Runbook](docs/runbook.md)
+- The last verified dashboard address from the Mac was `http://10.37.129.3:8765`. The latest browser checks covered the sidebar at phone, tablet and desktop widths. [Deployment and sidebar evidence](diary.md)
+- Next live checks are the controlled red-to-blue alert demonstration, console recovery and systemd boot and crash recovery. The configuration validation follow-up is tracked separately below.
 
 ## Panel design and repository cleanup — completed locally and saved
 
@@ -133,7 +128,7 @@ Acceptance: the core demo works before enforcement work starts. No Mac firewall 
 - [ ] Document the problem, existing-tool comparison and feasibility with verifiable sources.
 - [ ] Keep objectives, algorithms, implemented modules and evidence aligned; distinguish simulated and planned work.
 - [x] Record current CLI/VM and local dashboard inputs, expected/actual outcomes and limitations under `docs/verification/`, the diary and issue evidence.
-- [ ] Complete remaining boot/recovery, local-IP dashboard, provider and final-demo evidence as those scenarios are implemented and exercised.
+- [ ] Complete remaining boot/recovery, provider and final-demo evidence as those scenarios are implemented and exercised.
 - [ ] Record both students' meaningful contributions and rehearse each person's explanation.
 - [ ] Apply the confirmed report format when received. Leave faculty questions open until answered.
 - [ ] Freeze features, check secrets are excluded and rehearse the final presentation.

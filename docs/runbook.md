@@ -1,6 +1,6 @@
 # Running Heimdall
 
-This runbook covers the shell monitor and owner-requested local browser dashboard described in [ADR 0003](adr/0003-shell-monitor-with-local-dashboard.md). The first CLI is implemented and [tested on blue](verification/2026-11-04-cli-blue.md), including real fourth-failure alerts and restart persistence. The browser has local and HTTP-to-shell checks. Commands and schemas follow [the runtime contract](runtime-contract.md); boot/systemd recovery and faculty acceptance of the dashboard remain open.
+This runbook covers the shell monitor and owner-requested local browser dashboard described in [ADR 0003](adr/0003-shell-monitor-with-local-dashboard.md). The first CLI is implemented and [tested on blue](verification/2026-11-04-cli-blue.md), including real fourth-failure alerts and restart persistence. The dashboard was verified on blue over loopback and from the Mac over Host-Only. [Deployment evidence](../diary.md#2026-11-05--dashboard-deployed-and-verified-on-blue) Commands and schemas follow [the runtime contract](runtime-contract.md); boot/systemd recovery and faculty acceptance of the dashboard remain open.
 
 ## What runs where
 
@@ -29,7 +29,7 @@ If the owner account cannot read SSH's system journal, an administrator must rev
 
 The current application version is `0.1.0`. From its release directory, `./bin/heimdall help` lists the commands, `./bin/heimdall version` prints the version, and `./bin/heimdall demo` runs a labelled synthetic walkthrough without changing live state. The CLI prints JSON for machine-readable operations; pipe a result to `jq` when inspecting it. `config history` shows saved configuration changes.
 
-For the verified installation on blue, use `~/heimdall/heimdall help` or `~/heimdall/heimdall status` from any directory. This launcher points to the release recorded in [VM verification](verification/2026-11-04-cli-blue.md). The monitor was manually started and checked from the VM console after the deployment SSH connection closed; boot startup is still a separate step.
+For the verified installation on blue, use `~/heimdall/heimdall help` or `~/heimdall/heimdall status` from any directory. This launcher points to the release recorded in the [dashboard deployment entry](../diary.md#2026-11-05--dashboard-deployed-and-verified-on-blue). The previous launcher is saved as `~/heimdall/heimdall.before-dashboard`. The monitor was started manually and verified after the deployment SSH connection closed. After booting blue, check its status and start it manually if needed.
 
 In blue's terminal, enter the repository directory before running these commands:
 
@@ -96,7 +96,7 @@ Loopback (`127.0.0.1`) accepts only browsers on blue. To use a browser on the Ma
 ip -br address
 ```
 
-For Mac-to-blue access, use the current Host-Only address when available. Historical addresses in the diary may have changed. Stop the loopback server with Ctrl+C, then bind to the chosen address explicitly; replace `BLUE_LOCAL_IP` with that address:
+For Mac-to-blue access, use the current Host-Only address when available. The verified Mac URL was `http://10.37.129.3:8765/overview`. After booting blue, start the dashboard manually from the deployed release directory using the command below. Historical addresses in the diary may have changed. Stop the loopback server with Ctrl+C, then bind to the chosen address explicitly; replace `BLUE_LOCAL_IP` with that address:
 
 ```sh
 python3 web/server.py --host BLUE_LOCAL_IP --port 8765
