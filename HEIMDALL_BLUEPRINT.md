@@ -227,7 +227,7 @@ These tools already solve substantial parts of the problem. Heimdall should be c
 
 ## Current repository artifacts
 
-- `docs/index.html` is an interactive documentation and simulation page, not a running service.
-- `HEIMDALL_BLUEPRINT.html` is a standalone version of the project guide.
+- `docs/index.html` is the documentation index for current guidance and historical references.
+- `docs/archive/browser-simulation.html` preserves the earlier interactive guide and simulation; it does not run the monitor. Duplicate historical exports are recorded in `docs/archive/README.md`.
 - The sample terminal output is illustrative and does not call an external service.
 - No live syslog receiver, detection engine, database, dashboard, or notification provider is included yet.

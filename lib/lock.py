@@ -15,7 +15,7 @@ while True:
         break
     except BlockingIOError:
         if time.monotonic() >= deadline:
-            sys.exit('Heimdall operation is already active; lock wait expired')
+            sys.exit("Heimdall operation is already active; lock wait expired")
         time.sleep(0.05)
 # A fixed descriptor lets the shell close this lock in an independent journal
 # reader. Otherwise an orphaned child could keep a crashed monitor's lock alive.

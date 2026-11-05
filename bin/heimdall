@@ -4,8 +4,8 @@ set -eu
 umask 077
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 case "${1:-help}" in
- help|--help|-h)
-  cat <<'HELP'
+  help | --help | -h)
+    cat <<'HELP'
 Heimdall — explainable local SSH monitoring
 
 Usage: ./bin/heimdall COMMAND
@@ -34,12 +34,19 @@ Example: ./bin/heimdall config set '{"threshold":4,"window_seconds":300}'
 Review changes do not change SSH access. Blocking and providers are planned.
 See docs/runbook.md for dashboard login and Ubuntu setup.
 HELP
-  exit 0 ;;
- version|--version) cat "$ROOT/VERSION"; exit 0 ;;
+    exit 0
+    ;;
+  version | --version)
+    cat "$ROOT/VERSION"
+    exit 0
+    ;;
 esac
 DATA=${HEIMDALL_DATA_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/heimdall}
 STATE=$DATA/state.json
-err() { printf '%s\n' "$*" >&2; exit 1; }
+err() {
+  printf '%s\n' "$*" >&2
+  exit 1
+}
 command -v jq >/dev/null 2>&1 || err 'jq is required'
 command -v python3 >/dev/null 2>&1 || err 'python3 is required for address validation'
 if [ "${1:-}" = demo ]; then
@@ -56,9 +63,18 @@ validate() {
 }
 save() {
   tmp=$(mktemp "$DATA/.state.XXXXXXXX") || err 'Cannot create temporary state'
-  if ! cat > "$tmp" || ! jq -e . "$tmp" >/dev/null 2>&1; then rm -f "$tmp"; err 'Cannot write valid state'; fi
-  chmod 600 "$tmp" || { rm -f "$tmp"; err 'Cannot secure state'; }
-  mv -f "$tmp" "$STATE" || { rm -f "$tmp"; err 'Cannot replace state'; }
+  if ! cat >"$tmp" || ! jq -e . "$tmp" >/dev/null 2>&1; then
+    rm -f "$tmp"
+    err 'Cannot write valid state'
+  fi
+  chmod 600 "$tmp" || {
+    rm -f "$tmp"
+    err 'Cannot secure state'
+  }
+  mv -f "$tmp" "$STATE" || {
+    rm -f "$tmp"
+    err 'Cannot replace state'
+  }
 }
 # Monitor lifecycle must never hold the state transaction lock while waiting.
 if [ "${1:-}" = monitor ]; then
@@ -77,69 +93,113 @@ if [ ! -e "$STATE" ]; then
   printf '%s\n' '{"config":{"threshold":4,"window_seconds":300,"retention_days":60},"events":[],"alerts":[],"sources":{},"cursor":null,"mode":"live","config_history":[],"monitor":{"state":"stopped","pid":null,"source":"journalctl -u ssh","last_event_at":null,"last_error":null,"coverage":"unavailable"}}' | save
 fi
 validate
-cmd=${1:-}; shift || :
+cmd=${1:-}
+shift || :
 case "$cmd" in
- init) [ "$#" = 0 ] || err 'Usage: init'; jq '.config' "$STATE" ;;
- status) [ "$#" = 0 ] || err 'Usage: status'
-   alive=false; pid=$(jq -r '.monitor.pid // empty' "$STATE")
-   if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && ps -p "$pid" -o command= | grep -F "$ROOT/bin/heimdall monitor run" >/dev/null; then alive=true; fi
-   jq --argjson alive "$alive" '{monitor:((.monitor // {state:"stopped",pid:null,source:"journalctl -u ssh",last_event_at:null,last_error:null,coverage:"unavailable"}) | if $alive then . else .coverage="unavailable" | .pid=null | if .state=="running" then .state="error" | .last_error="Monitor process exited; coverage unavailable" else . end end),counts:{events:(.events|length),alerts:(.alerts|length),needs_review:([.alerts[]|select(.review_status == "needs_review")]|length)},providers:{discord:"not_implemented",virustotal:"not_implemented"},mode:(.mode // "live"),config:.config}' "$STATE" ;;
- alerts) [ "$#" = 0 ] || err 'Usage: alerts'; jq '.alerts | sort_by(.last_seen) | reverse | map(del(.events))' "$STATE" ;;
- events) [ "$#" = 0 ] || err 'Usage: events'; jq '.events | reverse | .[:200]' "$STATE" ;;
- config)
-  sub=${1:-}; shift || :
-  case "$sub" in
-   get) [ "$#" = 0 ] || err 'Usage: config get'; jq '.config' "$STATE" ;;
-   history) [ "$#" = 0 ] || err 'Usage: config history'; jq '.config_history // []' "$STATE" ;;
-   set) [ "$#" = 1 ] || err 'Usage: config set JSON'; patch=$1
-    jq -e -n --argjson p "$patch" '$p | type == "object" and (keys - ["threshold","window_seconds","retention_days"] | length == 0) and (all(to_entries[]; (.value|type) == "number" and (.value|floor) == .value and (if .key == "threshold" then .value >= 2 and .value <= 100 elif .key == "window_seconds" then .value >= 30 and .value <= 3600 else .value >= 1 and .value <= 365 end)))' >/dev/null 2>&1 || err 'Invalid configuration patch'
-    result=$(jq --argjson p "$patch" --argjson now "$(date +%s)" '.config += $p | .config_history = ((.config_history // []) + [{timestamp:$now,patch:$p}])' "$STATE") || err 'Cannot update configuration'
-    printf '%s\n' "$result" | save; jq '.config' "$STATE" ;;
-   *) err 'Usage: config get|history|set JSON' ;;
-  esac ;;
- inspect|review|reopen|report)
-   [ "$#" = 1 ] || err "Usage: $cmd ID"
-   id=$1
-   jq -e --arg id "$id" 'any(.alerts[]; .id == $id)' "$STATE" >/dev/null || err 'Unknown alert ID'
-   if [ "$cmd" = review ] || [ "$cmd" = reopen ]; then
-     review_status=needs_review; [ "$cmd" != review ] || review_status=reviewed
-     result=$(jq --arg id "$id" --arg status "$review_status" --argjson now "$(date +%s)" '.alerts |= map(if .id == $id then .review_status=$status | .review_history += [{timestamp:$now,status:$status,reason:"owner"}] else . end)' "$STATE")
-     printf '%s\n' "$result" | save
-   fi
-   record=$(jq --arg id "$id" '. as $state | .alerts[] | select(.id == $id) | .events = [.event_ids[] as $eid | $state.events[] | select(.id == $eid)]' "$STATE")
-   if [ "$cmd" = report ]; then
-     printf '%s\n' "$record" | jq -r '"Heimdall investigation \(.id)\nSource: \(.source_ip)\nSeverity: \(.severity)\nReview: \(.review_status)\nProvenance: \(.provenance)\n\(.explanation)\n\(.recommendation)\n\nEvidence:\n", (.events[] | "\(.timestamp // "unknown") | \(.username // "unknown") | \(.message)"), "\nReview history:", (.review_history[] | "\(.timestamp) | \(.status) | \(.reason)")'
-   else printf '%s\n' "$record"; fi ;;
- ingest|_journal_ingest)
-   [ "$#" = 1 ] || err 'Usage: ingest FILE|-'
-   provenance=fixture
-   if [ "$cmd" = _journal_ingest ]; then
-     [ "${HEIMDALL_INTERNAL_MONITOR:-}" = "$(jq -r '.monitor.pid // empty' "$STATE")" ] || err 'Journal ingestion requires the active monitor'
-     provenance=journal
-   else
-     pid=$(jq -r '.monitor.pid // empty' "$STATE")
-     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then err 'Stop live monitoring before fixture ingestion; use a separate data directory for demonstrations'; fi
-     [ "$(jq -r '[.events[] | select(.provenance == "journal")]|length' "$STATE")" = 0 ] || err 'Use a separate data directory for fixtures; live evidence already exists'
-   fi
-   input=$1; [ "$input" = - ] || [ -r "$input" ] || err 'Input file is unreadable'
-   batch=$(mktemp "$DATA/.batch.XXXXXXXX"); parsed=$(mktemp "$DATA/.parsed.XXXXXXXX"); malformed=0
-   if [ "$input" = - ]; then cat > "$batch"; else cat "$input" > "$batch"; fi
-   : > "$parsed"
-   while IFS= read -r line || [ -n "$line" ]; do
-     if [ ${#line} -gt 65536 ] || ! normalized=$(printf '%s\n' "$line" | jq -ce --arg provenance "$provenance" -f "$ROOT/lib/parse.jq" 2>/dev/null); then malformed=$((malformed+1)); continue; fi
-     printf '%s\n' "$normalized" >> "$parsed"
-   done < "$batch"
-   python3 "$ROOT/lib/normalize.py" < "$parsed" > "$batch"
-   result=$(jq --slurpfile incoming "$batch" --argjson malformed "$malformed" --argjson now "$(date +%s)" -f "$ROOT/lib/rules.jq" "$STATE") || { rm -f "$batch" "$parsed"; err 'Event processing failed'; }
-   result=$(printf '%s\n' "$result" | jq --arg mode "$provenance" '.mode = (if $mode == "fixture" then "fixture" else "live" end) | if $mode == "journal" then .monitor.last_event_at = ([.events[]|select(.provenance == "journal")|.timestamp // empty]|max // null) else . end')
-   printf '%s\n' "$result" | save; rm -f "$batch" "$parsed"; jq '.stats' "$STATE" ;;
- _monitor_state)
-   [ "$#" = 1 ] || err 'Missing monitor state'
-   result=$(jq --argjson p "$1" '.monitor = ((.monitor // {}) + $p)' "$STATE"); printf '%s\n' "$result" | save ;;
- cleanup)
-   [ "$#" = 0 ] || err 'Usage: cleanup'
-   before=$(jq '.events|length' "$STATE")
-   result=$(jq --argjson now "$(date +%s)" '($now - .config.retention_days*86400) as $cutoff | .alerts |= map(select(.last_seen >= $cutoff)) | [.alerts[].event_ids[]] as $keep | .events |= map(select(((.timestamp // .received_at // $now) >= $cutoff) or (.id as $id | $keep | index($id) != null))) | .sources = ((.sources // {}) | with_entries(select(.value.last >= $cutoff)))' "$STATE")
-   printf '%s\n' "$result" | save; after=$(jq '.events|length' "$STATE"); jq -n --argjson removed "$((before-after))" '{events_removed:$removed}' ;;
- *) err 'Usage: heimdall init|status|alerts|events|inspect|review|reopen|config|ingest|monitor|report|cleanup' ;;
+  init)
+    [ "$#" = 0 ] || err 'Usage: init'
+    jq '.config' "$STATE"
+    ;;
+  status)
+    [ "$#" = 0 ] || err 'Usage: status'
+    alive=false
+    pid=$(jq -r '.monitor.pid // empty' "$STATE")
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && ps -p "$pid" -o command= | grep -F "$ROOT/bin/heimdall monitor run" >/dev/null; then alive=true; fi
+    jq --argjson alive "$alive" '{monitor:((.monitor // {state:"stopped",pid:null,source:"journalctl -u ssh",last_event_at:null,last_error:null,coverage:"unavailable"}) | if $alive then . else .coverage="unavailable" | .pid=null | if .state=="running" then .state="error" | .last_error="Monitor process exited; coverage unavailable" else . end end),counts:{events:(.events|length),alerts:(.alerts|length),needs_review:([.alerts[]|select(.review_status == "needs_review")]|length)},providers:{discord:"not_implemented",virustotal:"not_implemented"},mode:(.mode // "live"),config:.config}' "$STATE"
+    ;;
+  alerts)
+    [ "$#" = 0 ] || err 'Usage: alerts'
+    jq '.alerts | sort_by(.last_seen) | reverse | map(del(.events))' "$STATE"
+    ;;
+  events)
+    [ "$#" = 0 ] || err 'Usage: events'
+    jq '.events | reverse | .[:200]' "$STATE"
+    ;;
+  config)
+    sub=${1:-}
+    shift || :
+    case "$sub" in
+      get)
+        [ "$#" = 0 ] || err 'Usage: config get'
+        jq '.config' "$STATE"
+        ;;
+      history)
+        [ "$#" = 0 ] || err 'Usage: config history'
+        jq '.config_history // []' "$STATE"
+        ;;
+      set)
+        [ "$#" = 1 ] || err 'Usage: config set JSON'
+        patch=$1
+        jq -e -n --argjson p "$patch" '$p | type == "object" and (keys - ["threshold","window_seconds","retention_days"] | length == 0) and (all(to_entries[]; (.value|type) == "number" and (.value|floor) == .value and (if .key == "threshold" then .value >= 2 and .value <= 100 elif .key == "window_seconds" then .value >= 30 and .value <= 3600 else .value >= 1 and .value <= 365 end)))' >/dev/null 2>&1 || err 'Invalid configuration patch'
+        result=$(jq --argjson p "$patch" --argjson now "$(date +%s)" '.config += $p | .config_history = ((.config_history // []) + [{timestamp:$now,patch:$p}])' "$STATE") || err 'Cannot update configuration'
+        printf '%s\n' "$result" | save
+        jq '.config' "$STATE"
+        ;;
+      *) err 'Usage: config get|history|set JSON' ;;
+    esac
+    ;;
+  inspect | review | reopen | report)
+    [ "$#" = 1 ] || err "Usage: $cmd ID"
+    id=$1
+    jq -e --arg id "$id" 'any(.alerts[]; .id == $id)' "$STATE" >/dev/null || err 'Unknown alert ID'
+    if [ "$cmd" = review ] || [ "$cmd" = reopen ]; then
+      review_status=needs_review
+      [ "$cmd" != review ] || review_status=reviewed
+      result=$(jq --arg id "$id" --arg status "$review_status" --argjson now "$(date +%s)" '.alerts |= map(if .id == $id then .review_status=$status | .review_history += [{timestamp:$now,status:$status,reason:"owner"}] else . end)' "$STATE")
+      printf '%s\n' "$result" | save
+    fi
+    record=$(jq --arg id "$id" '. as $state | .alerts[] | select(.id == $id) | .events = [.event_ids[] as $eid | $state.events[] | select(.id == $eid)]' "$STATE")
+    if [ "$cmd" = report ]; then
+      printf '%s\n' "$record" | jq -r '"Heimdall investigation \(.id)\nSource: \(.source_ip)\nSeverity: \(.severity)\nReview: \(.review_status)\nProvenance: \(.provenance)\n\(.explanation)\n\(.recommendation)\n\nEvidence:\n", (.events[] | "\(.timestamp // "unknown") | \(.username // "unknown") | \(.message)"), "\nReview history:", (.review_history[] | "\(.timestamp) | \(.status) | \(.reason)")'
+    else printf '%s\n' "$record"; fi
+    ;;
+  ingest | _journal_ingest)
+    [ "$#" = 1 ] || err 'Usage: ingest FILE|-'
+    provenance=fixture
+    if [ "$cmd" = _journal_ingest ]; then
+      [ "${HEIMDALL_INTERNAL_MONITOR:-}" = "$(jq -r '.monitor.pid // empty' "$STATE")" ] || err 'Journal ingestion requires the active monitor'
+      provenance=journal
+    else
+      pid=$(jq -r '.monitor.pid // empty' "$STATE")
+      if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then err 'Stop live monitoring before fixture ingestion; use a separate data directory for demonstrations'; fi
+      [ "$(jq -r '[.events[] | select(.provenance == "journal")]|length' "$STATE")" = 0 ] || err 'Use a separate data directory for fixtures; live evidence already exists'
+    fi
+    input=$1
+    [ "$input" = - ] || [ -r "$input" ] || err 'Input file is unreadable'
+    batch=$(mktemp "$DATA/.batch.XXXXXXXX")
+    parsed=$(mktemp "$DATA/.parsed.XXXXXXXX")
+    malformed=0
+    if [ "$input" = - ]; then cat >"$batch"; else cat "$input" >"$batch"; fi
+    : >"$parsed"
+    while IFS= read -r line || [ -n "$line" ]; do
+      if [ ${#line} -gt 65536 ] || ! normalized=$(printf '%s\n' "$line" | jq -ce --arg provenance "$provenance" -f "$ROOT/lib/parse.jq" 2>/dev/null); then
+        malformed=$((malformed + 1))
+        continue
+      fi
+      printf '%s\n' "$normalized" >>"$parsed"
+    done <"$batch"
+    python3 "$ROOT/lib/normalize.py" <"$parsed" >"$batch"
+    result=$(jq --slurpfile incoming "$batch" --argjson malformed "$malformed" --argjson now "$(date +%s)" -f "$ROOT/lib/rules.jq" "$STATE") || {
+      rm -f "$batch" "$parsed"
+      err 'Event processing failed'
+    }
+    result=$(printf '%s\n' "$result" | jq --arg mode "$provenance" '.mode = (if $mode == "fixture" then "fixture" else "live" end) | if $mode == "journal" then .monitor.last_event_at = ([.events[]|select(.provenance == "journal")|.timestamp // empty]|max // null) else . end')
+    printf '%s\n' "$result" | save
+    rm -f "$batch" "$parsed"
+    jq '.stats' "$STATE"
+    ;;
+  _monitor_state)
+    [ "$#" = 1 ] || err 'Missing monitor state'
+    result=$(jq --argjson p "$1" '.monitor = ((.monitor // {}) + $p)' "$STATE")
+    printf '%s\n' "$result" | save
+    ;;
+  cleanup)
+    [ "$#" = 0 ] || err 'Usage: cleanup'
+    before=$(jq '.events|length' "$STATE")
+    result=$(jq --argjson now "$(date +%s)" '($now - .config.retention_days*86400) as $cutoff | .alerts |= map(select(.last_seen >= $cutoff)) | [.alerts[].event_ids[]] as $keep | .events |= map(select(((.timestamp // .received_at // $now) >= $cutoff) or (.id as $id | $keep | index($id) != null))) | .sources = ((.sources // {}) | with_entries(select(.value.last >= $cutoff)))' "$STATE")
+    printf '%s\n' "$result" | save
+    after=$(jq '.events|length' "$STATE")
+    jq -n --argjson removed "$((before - after))" '{events_removed:$removed}'
+    ;;
+  *) err 'Usage: heimdall init|status|alerts|events|inspect|review|reopen|config|ingest|monitor|report|cleanup' ;;
 esac

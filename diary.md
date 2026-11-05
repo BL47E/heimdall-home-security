@@ -1,5 +1,13 @@
 # Heimdall development diary
 
+## 2026-11-05 — Directory cleanup and source formatting
+
+The owner approved the architecture survey's directory-cleanup pass. Historical proposal artifacts, the supplementary rubric guide and one browser simulation now live in [docs/archive](docs/archive/README.md). Hash checks established that the two earlier DOCX copies were identical and the two PDFs were identical; one copy of each was retained, removing 267,009 duplicate bytes. The second historical HTML simulation differed only in its notice and relative links and was removed after comparison. `docs/index.html` is now a small documentation entry point. Current faculty originals, plans, ADRs, evidence, fixtures, fonts/license and the pending panel design guide/reference were preserved.
+
+Formatted current Bash, Python, JavaScript, CSS and panel HTML using temporary development tools: shfmt 3.12.0, Black 25.1.0 and Prettier 3.6.2. No runtime dependency was added. Syntax-tree comparisons checked shell/Python/JavaScript/CSS structure, CSS declaration order and the package script's embedded Python. Panel element attributes/text and the original gate artwork were preserved; a formatter-ignore comment protects the artwork. This was a source-formatting check, not a new browser visual test.
+
+Verification passed: 19 monitor scenarios plus shell configuration checks, 9 real HTTP integration tests, source syntax and executable permissions, 82 local documentation links, formatter checks and diff whitespace checks. A fresh package in a temporary output directory contained the expected runtime, fixtures and local fonts and excluded the historical archive, caches and private state. The earlier release archive still matches its recorded checksum. This cleanup improves navigation and readability; no runtime speed improvement is claimed. [Issue 14](https://github.com/BL47E/heimdall-home-security/issues/14) tracks the work. No commit, push, VM deployment or state/network change accompanies this pass.
+
 ## 2026-11-05 — Separate dashboard pages and local terminal styling
 
 The owner requested distinct Overview, Investigations, Activity and Settings pages and an off-white/black terminal appearance, then chose JetBrains Mono. Implemented exact public page routes (`/`, `/overview`, `/investigations`, `/activity`, `/settings`) with one visible page per URL, real navigation links and preserved sign-in destination. Regular and Medium font files and their SIL Open Font License are bundled locally. The layout uses a black navigation rail, off-white workspace, larger navigation/evidence text, a skip-to-content link and restrained hover/focus lines that respect reduced-motion preferences.

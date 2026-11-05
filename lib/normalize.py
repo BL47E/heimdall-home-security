@@ -15,9 +15,15 @@ for line in sys.stdin:
     except ValueError:
         event["source_ip"] = None
         if address:
-            event["notes"].append("Source address could not be interpreted; excluded from the source rule")
+            event["notes"].append(
+                "Source address could not be interpreted; excluded from the source rule"
+            )
     cursor = event.get("cursor")
-    event["id"] = hashlib.sha256(("cursor:" + cursor if cursor else "fingerprint:" + line.strip()).encode()).hexdigest()
+    event["id"] = hashlib.sha256(
+        ("cursor:" + cursor if cursor else "fingerprint:" + line.strip()).encode()
+    ).hexdigest()
     if not cursor:
-        event["notes"].append("Journal identity unavailable; using a local content fingerprint")
+        event["notes"].append(
+            "Journal identity unavailable; using a local content fingerprint"
+        )
     print(json.dumps(event, separators=(",", ":")))

@@ -22,6 +22,8 @@ Implemented: password success/failure parsing, per-IP rolling-window alerts, rev
 
 The dashboard separates `/overview`, `/investigations`, `/activity` and `/settings`, with direct links and browser history. Its off-white workspace and black navigation use bundled JetBrains Mono fonts, so the interface loads without external font services.
 
+Future panel changes follow the [control panel design guide](docs/control-panel-design.md), including the owner's preference for dark dotted graphics, terminal art and animation.
+
 ## What the first version is planned to do
 
 - Watch SSH login records in the background, start at boot and attempt bounded recovery after a crash.
@@ -87,7 +89,7 @@ Whether the idea template also governs the final report, the submission date, pr
 
 ## Earlier reference artifacts
 
-[Browser simulation](docs/index.html), [HTML guide](HEIMDALL_BLUEPRINT.html), earlier filled idea documents and the full-marks guide under `docs/` predate the current milestone. They are reference material and may describe broader or older behavior; they do not establish implemented features or replace the supplied rubric. The current plan and evaluation mapping take precedence.
+[Historical references](docs/archive/README.md) include the earlier browser simulation, proposal artifacts and supplementary rubric guide. They predate the current milestone and may describe broader or older behavior; they do not establish implemented features or replace the supplied rubric. The current plan and evaluation mapping take precedence. The [documentation index](docs/index.html) links current documents and the archive.
 
 The browser simulation can be opened directly from disk; it does not run the Linux monitor or send real notifications.
 
