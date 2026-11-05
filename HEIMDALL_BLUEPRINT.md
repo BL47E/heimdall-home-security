@@ -2,6 +2,8 @@
 
 ## College milestone scope amendment
 
+Owner update, 2026-11-04: implement the shell monitor with a local browser dashboard for alert review, monitor control and validated configuration. [ADR 0003](docs/adr/0003-shell-monitor-with-local-dashboard.md) extends the earlier terminal-only decision: shell/jq owns parsing, rules and state, while a Python standard-library HTTP bridge provides authenticated local access. The first runtime implementation and integration verification are in progress; the broader architecture below remains future direction. See the [runbook](docs/runbook.md) and [runtime contract](docs/runtime-contract.md). Faculty questions and the separate SSH-blocking approval/recovery gate remain open.
+
 The agreed college milestone uses shell scripts, a terminal menu and commands, local files and two Ubuntu ARM64 VMs. Its ten-day delivery priorities and planned behavior are recorded in [the college milestone plan](docs/college-milestone-plan.md) and [ADR 0002](docs/adr/0002-shell-first-college-milestone.md). Those documents govern this milestone where they differ from the broader architecture below. The supplied evaluation rubric is mapped in [evaluation alignment](docs/evaluation-alignment.md); the supplied idea template is recorded there, while its applicability to the final report, title-page dates and any separate course requirements remain open for faculty confirmation. Automatic SSH source blocking is a last-priority, VM-only proposal that requires detailed design review and tested recovery before activation. The remaining sections describe the broader product direction, not implemented capabilities.
 
 ## Product direction

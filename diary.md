@@ -1,5 +1,39 @@
 # Heimdall development diary
 
+## 2026-11-05 — Separate dashboard pages and local terminal styling
+
+The owner requested distinct Overview, Investigations, Activity and Settings pages and an off-white/black terminal appearance, then chose JetBrains Mono. Implemented exact public page routes (`/`, `/overview`, `/investigations`, `/activity`, `/settings`) with one visible page per URL, real navigation links and preserved sign-in destination. Regular and Medium font files and their SIL Open Font License are bundled locally. The layout uses a black navigation rail, off-white workspace, larger navigation/evidence text, a skip-to-content link and restrained hover/focus lines that respect reduced-motion preferences.
+
+Integration hardened exact request-target guards, including fragments and absolute-form targets. The HTTP suite passes 9 real CLI-backed tests, including direct page loads, precise font assets, protected evidence endpoints and existing authentication/configuration behavior. Python compilation, JavaScript syntax, unique DOM IDs, local font signatures/license, absence of runtime remote URLs and whitespace checks pass. These checks do not establish dashboard deployment on blue.
+
+The parent agent's local browser checks used labelled synthetic records: direct Investigations login retained its path, the actual JetBrains font loaded, alert review/reopen and report download worked, saved settings changed from 4 to 5 and back to 4, unsaved edits triggered the leave-page warning, and Back/Forward selected the correct page. Selected alert details now refresh when their stored facts change while focused owner actions remain undisturbed. A delayed alert fetch released after actual API logout did not restore private content; sign-out on Settings cleared its form, and Back to Investigations remained signed out with no alerts. The final 390px Overview layout had no horizontal overflow, retained the active navigation marker and loaded JetBrains Mono with 14px navigation. See [dashboard verification](docs/verification/2026-11-05-dashboard.md) for the final browser evidence and responsive screenshots.
+
+Two Terra workers implemented the frontend and route/font serving updates; the Sol handler integrated them, strengthened session/history clearing and stale-response handling, refined accessibility/typography/motion, and ran integration checks. The parent performed browser verification and captures. These are agent contributions, not evidence of either student's individual academic contribution. No new VM deployment, Git commit/push, provider integration, firewall/network change or service activation accompanies this UI work. Faculty questions and the existing response/recovery gate remain open.
+
+## 2026-11-04 — CLI 0.1.0 packaged and tested on blue
+
+The owner asked to finish the CLI before deploying it to the VM for checks. Added help/default command, version, configuration history, a labelled isolated CLI demo and an allowlisted archive builder. Replaced directory locks with Python standard-library OS advisory locks, which release after crashes; added interrupted-monitor and concurrent-configuration tests. Parsing and rules remain shell/jq.
+
+Local source now passes 19 monitor tests plus configuration checks and 6 real HTTP integration tests. The packaged build passed 18 monitor and 6 HTTP tests on Ubuntu ARM64; the extra local test covers the real sanitized samples exported after deployment. Version 0.1.0 was copied into a fresh blue release directory and its SHA-256 checked there. Existing dependencies and journal access worked without installing packages or using sudo. `~/heimdall/heimdall` is the owner launcher.
+
+Actual controlled Mac-to-blue checks: three failed password logins produced no alert; the fourth within five minutes produced one MEDIUM alert with four failures. Reviewing it then making one existing-account wrong-password attempt reopened it with five failures and preserved review history. A live stop/start resumed from the saved journal cursor without changing the 24-event total or five-failure count. The monitor was left running manually. Captured actual accepted/invalid-user/existing-account messages as sanitized structured fixtures with explicit cursor pseudonyms and provenance notes.
+
+Blue's observed Host-Only address is `10.37.129.3`; the test source was the Mac at `10.37.129.2`, not red. Peekaboo reopened the console after the Mac was unlocked. The blue SSH fingerprint was compared with the console before using a private temporary known-hosts file for deployment. [Full evidence](docs/verification/2026-11-04-cli-blue.md) records the archive checksum, paths, commands and limitations. No firewall, network topology, account-access or system service changes were made. Boot/recovery, daily retention scheduling, red-to-blue checks, browser deployment on blue and optional integrations remain future verification/work; faculty questions remain open.
+
+The owner authorized the sequencing and restored desktop access; the assistant implemented, packaged and exercised the CLI. This does not establish either student's individual academic contribution. No Git commit or push was made.
+
+## 2026-11-04 — First shell monitor and browser dashboard
+
+The owner requested implementing the monitor and adding a local browser dashboard, with shadcn/OpenCode visual references. [ADR 0003](docs/adr/0003-shell-monitor-with-local-dashboard.md) records the scope expansion; faculty tool acceptance remains open.
+
+Implemented shell/jq password parsing, rolling-window alerts, restricted atomic state, replay deduplication, review history, configurable limits, reports, explicit retention cleanup and journal monitor lifecycle. Python provides the local HTTP bridge and a small IP/fingerprint helper. The dashboard offers token login, status, evidence, review/reopen and configuration with an offline monochrome design. See [the runbook](docs/runbook.md).
+
+Local verification: 13 monitor scenario tests plus shell configuration checks and 6 real HTTP-to-shell integration tests pass. Shell/JavaScript syntax and whitespace checks pass. The browser displayed a labelled synthetic alert and persisted an owner review. A 390px phone viewport had no horizontal overflow. Exact details and limitations are in [issue 13 evidence](https://github.com/BL47E/heimdall-home-security/issues/13#issuecomment-6633729764).
+
+Blue was started and logged in through Peekaboo. Later `prlctl list` showed it running, while guest execution returned “Unable to open new session in this virtual machine.” No guest installation, new SSH attempts, real fixture export, live journal runtime validation or service activation was completed. The current dashboard runs on the Mac's loopback address with disposable synthetic state; this is not live blue monitoring. Daily cleanup scheduling, Discord, VirusTotal, TUI, guided demonstration and enforcement remain planned.
+
+The owner supplied scope and design direction. Two Terra workers supplied initial state/config code and dashboard code; the Sol handler defined the contract, integrated documentation and strengthened HTTP/session tests. The parent completed the missing monitor implementation, expanded scenario tests and refined/checked the browser UI. These are agent contributions; both students' actual academic contributions still need recording. No Git commit or push was made.
+
 ## 2026-11-01 — Lab setup and first SSH tests
 
 ### What we completed

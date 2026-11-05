@@ -1,0 +1,28 @@
+# Manual template only. Replace every @...@ token and review before installation.
+# Keep the HTTP server unprivileged and separate from this unit.
+[Unit]
+Description=Heimdall shell SSH monitor
+After=systemd-journald.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=@OWNER@
+Group=@GROUP@
+SupplementaryGroups=systemd-journal
+WorkingDirectory=@REPO_DIR@
+Environment=HEIMDALL_DATA_DIR=@DATA_DIR@
+ExecStart=@REPO_DIR@/bin/heimdall monitor run
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=@DATA_DIR@
+
+[Install]
+WantedBy=multi-user.target

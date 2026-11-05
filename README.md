@@ -6,15 +6,21 @@
 
 A college project for Linux & Shell Programming (CSET-213).
 
-**[Milestone plan](docs/college-milestone-plan.md)** · **[Build checklist](checklist.md)** · **[Evaluation requirements](docs/evaluation-alignment.md)** · **[Architecture decision](docs/adr/0002-shell-first-college-milestone.md)**
+**[Runbook](docs/runbook.md)** · **[Milestone plan](docs/college-milestone-plan.md)** · **[Build checklist](checklist.md)** · **[Evaluation requirements](docs/evaluation-alignment.md)** · **[Dashboard decision](docs/adr/0003-shell-monitor-with-local-dashboard.md)**
 
 </div>
 
 ## Current status
 
-**Planning complete enough to begin development; the live software is not implemented yet.** This repository contains the agreed plan, architecture decisions, supplied academic documents and earlier browser simulations. There is no installed `heimdall` command or working monitoring service yet.
+**CLI version 0.1.0 is implemented and has been deployed and tested on blue.** The current runtime lives in `bin/`, `lib/` and `web/`. [VM verification](docs/verification/2026-11-04-cli-blue.md) records real SSH failures, fourth-failure alerting, review reopening and stop/start persistence. The dashboard passes local browser and HTTP-to-shell checks; its VM deployment and boot/systemd recovery remain separate work. Discord delivery, VirusTotal integration and real blocking remain planned.
 
-The current milestone is a shell-first, terminal-based SSH monitor on Ubuntu ARM64. The broader NAS/router product in [the blueprint](HEIMDALL_BLUEPRINT.md) remains future direction. [ADR 0002](docs/adr/0002-shell-first-college-milestone.md) records this scope decision.
+The current milestone is a shell-first SSH monitor on Ubuntu ARM64, with shell commands and an owner-requested browser dashboard for status, evidence, review and configuration. [ADR 0003](docs/adr/0003-shell-monitor-with-local-dashboard.md) extends [ADR 0002](docs/adr/0002-shell-first-college-milestone.md): Python's standard library serves HTTP while shell/jq handles SSH rules and state. The broader NAS/router product in [the blueprint](HEIMDALL_BLUEPRINT.md) remains future direction. Faculty acceptance of the expanded dashboard technology remains unconfirmed.
+
+See the [runbook](docs/runbook.md) for local startup, owner-token login, explicit local-IP access, offline sample processing and the uninstalled systemd template. Live records and synthetic sample state must remain separate.
+
+Implemented: password success/failure parsing, per-IP rolling-window alerts, review/reopen history, restart-persistent records and replay deduplication, configurable rule limits/history, text reports, help/version, a labelled synthetic CLI demo and explicit retention cleanup. The browser supports token login, alert investigation, recent events, configuration and monitor controls. Live journal startup/resumption was checked on Ubuntu; the uninstalled service template, daily scheduled retention, TUI and provider integrations remain planned or unverified.
+
+The dashboard separates `/overview`, `/investigations`, `/activity` and `/settings`, with direct links and browser history. Its off-white workspace and black navigation use bundled JetBrains Mono fonts, so the interface loads without external font services.
 
 ## What the first version is planned to do
 
@@ -22,7 +28,7 @@ The current milestone is a shell-first, terminal-based SSH monitor on Ubuntu ARM
 - Raise an explainable alert after **four failures from the same IP in a rolling five-minute window**, across usernames.
 - Group a continuous burst until five minutes without another failure. Show the source, timeline, matched rule and recommendations.
 - Summarize a successful login with matching preceding failures for the same user and IP when the data supports it.
-- Offer a terminal menu and direct commands for status, alerts, investigation, review and report export.
+- Offer direct shell commands and a local browser dashboard for status, alerts, investigation, review, validated configuration and report export. A terminal menu remains a later convenience.
 - Preserve local alert history for **60 days** by default, including review history across restarts. Daily cleanup preserves pending delivery and active block records.
 - Send optional Discord webhook messages. Queue failed deliveries and send a grouped list when Discord becomes reachable again.
 - Optionally enrich eligible public IPs with VirusTotal context. Missing results mean unknown, and zero flags mean no flags found. Local processing works offline.
@@ -45,14 +51,16 @@ Separate outbound connectivity supports Discord and optional VirusTotal. Private
 |---|---|
 | Main language | Linux shell scripts |
 | Supporting tools | Common Linux commands, curl and jq |
-| Management | Terminal menu and command interface |
+| Management | Shell command interface and local browser dashboard |
+| HTTP bridge | Python 3 standard library; no hosted dependencies |
+| Normalization helper | Python standard library for canonical IPs and content fingerprints |
 | Background operation | Linux service manager |
 | Storage | Local files with restricted permissions and safe writes |
 | Notifications | Optional Discord webhook |
 | Reputation context | Optional VirusTotal API v3 with caching and limits |
 | Deployment | Ubuntu ARM64 VMs |
 
-Python, SQLite, a web dashboard and Docker Compose belong to the broader future architecture, not prerequisites for this milestone.
+Python is now a prerequisite for the browser bridge, following the owner's scope change. SQLite, Docker Compose and a Python rules engine remain outside this shell-first implementation.
 
 ## Start building
 
@@ -60,7 +68,7 @@ Follow [checklist.md](checklist.md) and the [GitHub build backlog](docs/build-ba
 
 1. VM setup, representative SSH logs and sample fixtures.
 2. Live parsing, rolling-window detection and explanations.
-3. Persistent investigations, CLI, TUI and background service.
+3. Persistent investigations, CLI, browser dashboard and background service.
 4. Discord delivery and outage recovery.
 5. Optional VirusTotal context and readable reports.
 6. Guided demo, evidence and rehearsal; real blocking only after its design and recovery gates pass.

@@ -1,0 +1,7 @@
+# Synthetic SSH records
+
+`password-burst.jsonl` contains hand-authored journal-shaped examples. Cursors beginning `synthetic:` are demonstration identities. The fixture creates four failures across two usernames and a later success; replay performs no SSH connection or network action.
+
+`ubuntu-password-sanitized.jsonl` was exported on 2026-11-04 from `journalctl -u ssh --no-pager -o json` on blue (Ubuntu 26.04.1 LTS, ARM64). It contains actual accepted-password, invalid-user failed-password and existing-account failed-password records. It is a structured export rather than a screen transcription. Sanitization retains only `MESSAGE`, `__REALTIME_TIMESTAMP` and a pseudonymized `__CURSOR`; the owner username is replaced with `testuser`, and each original cursor is replaced with an explicitly labelled `sanitized:ubuntu-export:` identity. Event timestamps and remaining message text are preserved. Host/process metadata is omitted. Source IP `10.37.129.2` is the Mac's Host-Only address in this session; these samples are not red-to-blue evidence.
+
+Actual journal cursor equality and microsecond timestamp fields were inspected separately on blue before deployment. A sanitized cursor is not a journal reference usable by `journalctl --after-cursor`. Ingestion of either file is fixture replay and must not be presented as live coverage. Fixture replay needs no SSH connection, provider credential or internet access.

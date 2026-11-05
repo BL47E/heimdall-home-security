@@ -1,6 +1,6 @@
 # Heimdall college milestone
 
-Status: agreed planning direction, 2026-11-01. Features below are planned, not implemented. The existing browser prototype is simulated. This plan scopes a shell-first college milestone; see [the blueprint](../HEIMDALL_BLUEPRINT.md) for the broader product and [ADR 0002](adr/0002-shell-first-college-milestone.md) for the milestone architecture decision.
+Status: agreed planning direction, 2026-11-01, extended by the owner's 2026-11-04 request for a local browser dashboard. Runtime implementation and integration verification are in progress; the feature list below remains the target until linked evidence establishes completion. The earlier browser prototype is simulated. See [ADR 0003](adr/0003-shell-monitor-with-local-dashboard.md) for the dashboard amendment to [ADR 0002](adr/0002-shell-first-college-milestone.md), [the runbook](runbook.md) for setup, and [the blueprint](../HEIMDALL_BLUEPRINT.md) for the broader product.
 
 ## Goal and constraints
 
@@ -11,12 +11,13 @@ The owner supplied the 30-mark evaluation rubric and idea template on 2026-11-01
 ## Environment and architecture
 
 - MacBook M4 Air, 16 GB RAM, hosting two Ubuntu ARM64 VMs.
-- Heimdall VM: SSH service, shell-based monitor, local records, TUI, command interface.
+- Heimdall VM: SSH service, shell-based monitor, local records, command interface and local browser dashboard. A TUI remains optional later work.
 - Test VM: controlled SSH attempts against the Heimdall VM over a private virtual network.
 - Separate outbound connectivity for Discord and optional VirusTotal access.
-- Shell is the main implementation language; common tools such as curl and jq are allowed. Select and document the exact Ubuntu release and dependencies during setup.
+- Shell is the main implementation language; jq handles JSON records and Python 3's standard library provides the HTTP bridge. This owner-requested addition is not evidence of faculty approval of permitted technologies. Select and document the exact Ubuntu release and dependencies during setup.
 - Local files store state and history. Use restricted permissions, atomic updates and locking where needed; keep secrets out of reports and source control.
-- A Linux service manager starts monitoring at boot, prevents duplicate monitor instances and attempts bounded restarts after crashes. Closing the TUI does not stop monitoring.
+- A Linux service manager is the intended boot/startup path, with duplicate prevention and bounded crash restarts. The repository includes a manual service template, not an installed or verified boot service. Closing the browser does not stop an independently running monitor.
+- The dashboard defaults to loopback; binding a specific trusted local IP requires an explicit launch option. Owner-token login and protected mutations govern review, configuration and monitor start/stop. No automatic firewall, adapter or router changes accompany dashboard access.
 - Local monitoring remains useful offline. There is no outage-triggered quarantine mode.
 
 ## Detection and investigation
@@ -73,7 +74,7 @@ The owner supports automatic SSH source blocking in the isolated VM. The detaile
 
 ## Management and retention
 
-The TUI and commands share the same application operations. Proposed command names:
+The browser dashboard and commands share the same application operations. Current implementation interface and schemas are specified in [the runtime contract](runtime-contract.md); the earlier TUI-oriented command sketch below remains a proposal for convenience commands, not evidence each command exists:
 
 ```text
 heimdall                     Open terminal menu
@@ -97,7 +98,7 @@ Keep alerts for 60 days by default, configurable. Run cleanup daily. Preserve pe
 
 1. Day 1: establish both VMs, private networking, SSH and representative logs; record setup.
 2. Days 2–3: parser, sample fixtures, rolling-window rule, live monitoring and explanations.
-3. Days 4–5: local history, review states, commands, TUI and background service lifecycle.
+3. Days 4–5: local history, review states, commands, browser dashboard and background service lifecycle.
 4. Day 6: Discord alerts, outage queue and grouped recovery delivery.
 5. Day 7: optional VirusTotal context and investigation reports.
 6. Day 8: guided demo, health visibility and end-to-end checks. If core features are reliable, review the SSH response design and test console recovery before implementation.
