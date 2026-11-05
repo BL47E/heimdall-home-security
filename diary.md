@@ -1,5 +1,52 @@
 # Heimdall development diary
 
+## 2026-11-05 — Dashboard deployed and verified on blue
+
+- Compared blue's ED25519 SSH fingerprint from the Parallels console with the Host-Only SSH endpoint at `10.37.129.3`. The prepared archive passed SHA-256 verification on the Mac and blue before extraction into `~/heimdall/releases/0.1.0.lzc7GK/heimdall-0.1.0`. The previous release and live state were retained.
+- Tested the dashboard on blue at `127.0.0.1:8765` and confirmed it was unreachable from the Mac in that mode. Then bound it explicitly to the Host-Only address and verified all four page routes, owner login, anonymous request denial, live status, existing alert details, report export and sign-out over HTTP from the Mac. The owner token file was private (mode 600).
+- Blue's monitor initially reported stopped with 24 events and one alert awaiting review. Started it through the dashboard, then verified a dashboard stop/start cycle preserved the alert history. The monitor resumed reading the SSH journal and reported available coverage. After the deployment SSH connection closed, authenticated HTTP still reported running with 34 events and one alert awaiting review. The count includes SSH activity during the deployment window.
+- The previous CLI launcher checked for a monitor process under its own release path and therefore reported an error for the healthy new process. Saved it as `~/heimdall/heimdall.before-dashboard` and pointed `~/heimdall/heimdall` at the dashboard's release. The updated CLI and dashboard agreed on status.
+- On blue, all 28 Python tests and shell configuration checks passed. The dashboard is running manually at `http://10.37.129.3:8765`. HTTP checks exercised the live deployment, and the earlier synthetic browser checks cover rendering and interactions. Boot/crash recovery and the controlled red-to-blue alert demonstration remain open.
+
+
+## 2026-11-05 — Next-session handoff
+
+Start here for current state; the dated entries below describe their own checkpoints and may say that work was uncommitted or unimplemented at that earlier time. [The checklist](checklist.md) has been reconciled with the actual implementation and remaining evidence.
+
+### Saved work and current Git state
+
+- `a64d19e` saved the shell SSH monitor, authenticated browser dashboard, tests and implementation documentation and was pushed to `main`.
+- Subsequent commit `82b5bd0` saves the historical-archive cleanup, source formatting, panel design guide, `AGENTS.md` pointer and owner-provided dotted design reference. At handoff inspection, `main` and the locally recorded `origin/main` both pointed to this commit, and the working tree was clean before this checklist/diary update. These two documentation edits are subsequent local changes; no new commit or push is part of this update.
+- The standing panel design source is [docs/control-panel-design.md](docs/control-panel-design.md): black/off-white, locally bundled JetBrains Mono, distinct pages, dark dotted graphics, TUI art and purposeful animation. Follow it before future panel work. Historical artifacts live in [docs/archive](docs/archive/README.md); faculty originals, evidence, fixtures and fonts/license were retained.
+
+### 2026-11-05 live VM and dashboard deployment checkpoint
+
+- The owner booted both Ubuntu VMs. `prlctl list` reported `UbuntuServMain` (blue) and `UbuntuServTest` (red) running; `prlctl list -i` reported Host-Only addresses `10.37.129.3` and `10.37.129.4` respectively. Kali was stopped. Parallels guest tools are not installed, so `prlctl exec` could not run guest commands.
+- Peekaboo inspected blue's existing console without changing VM state. Its visible `heimdall status` reported monitor `running`, source `journalctl -u ssh`, coverage `available`, no last error, 24 events, 1 alert and 1 needing review. This is a live observation at this checkpoint, not proof of boot recovery.
+- TCP port 22 accepted connections from the Mac on both Host-Only addresses. This confirms host-to-guest SSH reachability; red-to-blue attempt flow was not tested in this checkpoint.
+- Built the current source archive outside the repository at `/tmp/heimdall-current-release/heimdall-0.1.0.tar.gz`, SHA-256 `bfb500fd31f9f00e52947ea8dab6ba85dfc1cc82c2f111037d424fcd5be42666`. Its file list includes the HTTP bridge, current dashboard assets/fonts, CLI and service template. The older `dist/` archive was left untouched.
+- No VM files or services were changed and the dashboard was not deployed. `ssh-add -l` reported no identities, so verified SSH transfer is not yet available from the Mac. Peekaboo was available for background observation; this session did not perform terminal input. The next operational step is to make the owner's authorized SSH identity available, then verify the host key and deploy the prepared archive. Keep the existing monitor state and release intact.
+
+### Implemented and verified
+
+- Shell/jq owns password-result parsing, per-IP rolling-window alerts, durable restricted JSON state, deduplication/cursors, review/reopen history, configuration/history, text reports, explicit cleanup, monitor lifecycle and a separate synthetic demo. Python provides narrow lock/normalization helpers and the local HTTP bridge. Blocking, Discord and VirusTotal are still planned.
+- The panel has distinct Overview, Investigations, Activity and Settings URLs, owner-token login, guarded mutations, evidence/review/report workflows, dirty-setting protection and session/history clearing. Browser checks used labelled synthetic Mac state; [dashboard evidence](docs/verification/2026-11-05-dashboard.md) does not establish VM deployment.
+- Latest completed source suite: **19 monitor tests plus shell configuration checks and 9 HTTP integration tests passed** after cleanup. Additional checks covered syntax/structure equivalence, CSS order, panel HTML/art, source permissions, 82 then-current documentation links, formatter checks, unchanged protected files and package contents. No runtime suite was rerun solely for this documentation update.
+- [Cleanup issue 14](https://github.com/BL47E/heimdall-home-security/issues/14) is closed. [Implementation issue 13](https://github.com/BL47E/heimdall-home-security/issues/13) remains open for unfinished milestone work. Cleanup was organizational/readability work; no runtime speed improvement was established.
+
+### Runtime and deployment checkpoint
+
+- The local Mac preview command using `/tmp/heimdall-dashboard-demo` stopped with exit 143, indicating termination. No listener on port 8765 was found during this handoff. Reuse the runbook's isolated synthetic-state instructions to restart it; keep demo and live records separate and keep owner tokens out of chat/screenshots/Git.
+- The last verified blue deployment is the earlier CLI 0.1.0 release described in [VM evidence](docs/verification/2026-11-04-cli-blue.md), with launcher `~/heimdall/heimdall`. The monitor was left running manually then; its current power/network/process state was not rechecked in this update. The latest dashboard, formatting and design-guide changes have not been deployed to blue.
+- The original `dist/` archive was preserved and still matched SHA-256 `43a1313de56e4eec56cbf8342dfb433658d9bd5fc5926aa06f86109aa9e0d490` at cleanup verification. A newer cleanup package was built only in temporary output; do not mistake either version-labelled archive for an automatically updated VM release.
+
+### Where to resume
+
+1. Read `AGENTS.md`, README, the checklist and this checkpoint; inspect Git status before changing files. Preserve existing work, including these documentation updates.
+2. The recommended next architecture candidate is configuration-policy consistency: limits currently repeat in CLI/HTTP/HTML, and CLI/HTTP differ on empty patches. The survey is complete, but this refactor has not been designed or implemented. Browser lifecycle deepening and ingestion optimization remain separate candidates.
+3. The live VM checkpoint above supersedes the earlier note that blue's current state needed rechecking. Make an authorized SSH identity available, then deploy/verify the prepared dashboard at loopback and a reachable trusted local IP. Console recovery, systemd boot/crash recovery, daily retention scheduling and further end-to-end evidence remain open. No automatic firewall/network change is authorized.
+4. Keep issues 9–12's owner decisions, CI gates, Discord/outage delivery, optional reputation, the SSH enforcement design/recovery gate, faculty requirements and actual student contributions open until resolved. Existing tests or agent work do not settle faculty or contribution questions.
+
 ## 2026-11-05 — Directory cleanup and source formatting
 
 The owner approved the architecture survey's directory-cleanup pass. Historical proposal artifacts, the supplementary rubric guide and one browser simulation now live in [docs/archive](docs/archive/README.md). Hash checks established that the two earlier DOCX copies were identical and the two PDFs were identical; one copy of each was retained, removing 267,009 duplicate bytes. The second historical HTML simulation differed only in its notice and relative links and was removed after comparison. `docs/index.html` is now a small documentation entry point. Current faculty originals, plans, ADRs, evidence, fixtures, fonts/license and the pending panel design guide/reference were preserved.

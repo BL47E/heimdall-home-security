@@ -2,9 +2,29 @@
 
 Current scope: [college milestone](docs/college-milestone-plan.md), [ADR 0002](docs/adr/0002-shell-first-college-milestone.md), the owner's [dashboard extension in ADR 0003](docs/adr/0003-shell-monitor-with-local-dashboard.md) and [evaluation alignment](docs/evaluation-alignment.md). The broader blueprint remains future scope where the milestone overrides it.
 
-Status: CLI 0.1.0 passes local tests and has been deployed and checked against real SSH records on blue; see [VM verification](docs/verification/2026-11-04-cli-blue.md). The browser has local and HTTP-to-shell checks. Items requiring boot/service recovery or browser VM deployment remain open. GitHub Issues are the implementation tracker; see the [build backlog](docs/build-backlog.md). Track actual contribution by both students.
+Status: CLI and dashboard 0.1.0 are deployed on blue. Live status, preserved alert history, owner authentication and Host-Only access were verified on 2026-11-05; see [the diary](diary.md) and [earlier CLI verification](docs/verification/2026-11-04-cli-blue.md). Boot/crash recovery and a controlled red-to-blue alert demonstration remain open. GitHub Issues are the implementation tracker; see the [build backlog](docs/build-backlog.md). Track actual contribution by both students.
 
-Progress reconciled on 2026-11-04 against [the diary](diary.md), [lab verification evidence](https://github.com/BL47E/heimdall-home-security/issues/1#issuecomment-6632267553) and the [SSH contract discussion](https://github.com/BL47E/heimdall-home-security/issues/9). Checked planning items below record agreed choices, not working runtime behavior. Earlier lab observations do not establish the VMs' current power state or addresses.
+Progress reconciled on 2026-11-05 against [the diary](diary.md), [CLI/VM verification](docs/verification/2026-11-04-cli-blue.md), [dashboard verification](docs/verification/2026-11-05-dashboard.md) and [cleanup issue 14](https://github.com/BL47E/heimdall-home-security/issues/14). Planning checkboxes record agreed choices; implementation checkboxes identify their evidence below. The VM power, addresses and blue monitor status were rechecked live on 2026-11-05; see the diary. Earlier lab observations do not establish current state beyond that checkpoint.
+
+## Pre-deployment checkpoint — 2026-11-05
+
+The [dashboard deployment entry](diary.md) supersedes the VM and package status in this checkpoint.
+
+- Latest implementation commit: `82b5bd0` on `main`, including cleanup and the panel design guide. At handoff inspection, `HEAD` matched the locally recorded `origin/main`; this documentation update is a subsequent local change.
+- Latest completed runtime checks: **19 monitor tests plus shell configuration checks and 9 real HTTP integration tests**. Cleanup also passed syntax/structure, source-permission, package and local-link checks; this documentation update does not rerun the runtime suite.
+- The Mac demo dashboard server on port 8765 has stopped (exit 143); no listener was found at handoff. Restart explicitly with separate synthetic state if needed; [runbook](docs/runbook.md) has the commands.
+- Blue's earlier manually deployed CLI remains the last deployed VM build. On 2026-11-05, Parallels and Peekaboo confirmed both Ubuntu VMs running; blue was `10.37.129.3`, red `10.37.129.4`, and blue's monitor reported running with journal coverage available (24 events, 1 alert needing review). SSH port 22 responded at both Host-Only addresses. The current dashboard has not been deployed there.
+- A current-source package was built at `/tmp/heimdall-current-release/heimdall-0.1.0.tar.gz` (SHA-256 `bfb500fd31f9f00e52947ea8dab6ba85dfc1cc82c2f111037d424fcd5be42666`); the older `dist/` package was preserved. Deployment is pending authorized SSH access; the Mac SSH agent had no identities. Kali was stopped.
+- Recommended next architecture work: configuration consistency. The survey found repeated validation limits and different handling of an empty patch in the CLI and HTTP paths. This refactor has not been implemented.
+
+## Panel design and repository cleanup — completed locally and saved
+
+- [x] Create [the control panel design guide](docs/control-panel-design.md), link it from `AGENTS.md`/README and retain the owner's reference image. Use black/off-white, local JetBrains Mono, separate pages, and the stated preference for dark dotted graphics, TUI art and animations.
+- [x] Archive historical guides/proposal artifacts in [docs/archive](docs/archive/README.md); preserve faculty originals, current plans, ADRs and evidence.
+- [x] Verify duplicate hashes before removing two identical template copies and the near-identical second HTML simulation; retain a small documentation index and repair links.
+- [x] Format runtime source and relevant tests without a behavior/design refactor or new runtime dependencies; preserve syntax structure, CSS order, HTML/art and source permissions.
+- [x] Pass all 28 runtime tests, verify the 82 then-current local documentation links and build a package in temporary output; preserve the earlier deployed release archive/checksum. [Issue 14](https://github.com/BL47E/heimdall-home-security/issues/14) is closed.
+- [ ] Address configuration-policy consistency as a separate follow-up; browser session structure and ingestion optimization remain additional survey candidates, not completed refactors.
 
 ## Ready to start
 
@@ -31,8 +51,9 @@ Progress reconciled on 2026-11-04 against [the diary](diary.md), [lab verificati
 - [x] Verify owner-token login, session handling, CSRF/origin/host checks and private token storage (local HTTP integration tests).
 - [x] Verify distinct Overview/Investigations/Activity/Settings routes, owner login destination, local JetBrains Mono loading, review/reopen/report actions, saved settings and dirty-edit warnings with local synthetic state; see [dashboard verification](docs/verification/2026-11-05-dashboard.md).
 - [x] Verify sign-out and browser-history restoration clear private records, including a delayed alert response arriving after logout (local browser check).
-- [ ] Verify live monitor controls and status in the deployed blue dashboard; browser layout checks do not establish live Ubuntu coverage.
-- [ ] Verify loopback default and explicit trusted-local-IP access on blue; record actual reachable address without changing network controls automatically.
+- [x] Preserve the approved panel appearance during source formatting using syntax/HTML/CSS comparisons; no new visual browser test was performed for the cleanup.
+- [x] Verify live monitor start/stop, status and retained alert history in the deployed blue dashboard over authenticated HTTP.
+- [x] Verify loopback default and explicit Host-Only access on blue at `10.37.129.3:8765`; see [the diary](diary.md).
 - [x] Record which scenarios use synthetic data and which were verified against real Ubuntu SSH records; current runtime tests use synthetic/fake-journal input, not live Ubuntu evidence.
 
 ## 1. Ubuntu lab and log contract — Day 1
@@ -44,13 +65,15 @@ Progress reconciled on 2026-11-04 against [the diary](diary.md), [lab verificati
 - [ ] Verify and record separate outbound connectivity where configured.
 - [x] Inspect real successful and invalid-user failed-password records; identify `journalctl -u ssh`, observed `sshd-session` messages, displayed timestamps/time zone and non-root read access in the tested account.
 - [x] Export structured sanitized successful, invalid-user and existing-account wrong-password samples; fixture documentation records omitted fields and pseudonymized cursors.
-- [ ] Document dependencies, setup and teardown. Capture three-failure, fourth-failure, expired-window, multiple-IP, missing-field and malformed examples.
+- [x] Document dependencies, startup/shutdown, packaging and optional manual service setup/removal in the runbook; the service template remains uninstalled.
+- [x] Capture synthetic boundary/multiple-IP/missing-field/malformed scenarios and real Mac-to-blue three/four-failure evidence.
+- [ ] Capture any additional real expired-window, multiple-IP and red-to-blue end-to-end evidence required for the final demonstration.
 
 Acceptance: representative real logs and repeatable offline samples are available; tests remain on the VM network. Record chosen versions and environment rather than guessing log paths.
 
 ## 2. Parsing and detection — Days 2–3
 
-- [ ] Parse the supported log source into a stable event contract. Treat log text as data and handle missing fields visibly.
+- [x] Implement supported password-result parsing and visible missing-field handling; synthetic scenarios and sanitized real Ubuntu exports pass. Final owner sign-off of the event contract remains open in issue 9 above.
 - [x] Implement four failures per IP in a rolling five-minute window, across usernames; keep unknown sources separate (synthetic tests).
 - [x] Group bursts until five quiet minutes and explain counts, timeline, severity and matched rule (synthetic tests).
 - [x] Summarize successes against matching IP/user failures and preserve unknown counts when evidence is incomplete (synthetic implementation; live coverage remains to verify).
@@ -63,11 +86,14 @@ Acceptance: three failures do not alert, the fourth within the window does, expi
 - [x] Implement restricted local storage, atomic updates and OS advisory locking; Ubuntu tests exercise crash recovery, and live stop/start preserves journal state. Boot recovery remains below.
 - [x] Add alert listing, inspection, review/reopen, review history and simple readable report output (local CLI/HTTP tests).
 - [x] Reopen a reviewed active alert on new failures; a later burst becomes a new alert (synthetic tests).
-- [ ] Add shared CLI/browser operations and honest monitoring/provider status; TUI remains later convenience work.
-- [ ] Add service startup, shutdown, duplicate prevention, bounded crash restart and readable failure state.
+- [x] Add shared CLI/browser operations and honest monitoring/provider status (real HTTP-to-CLI tests); optional TUI remains planned.
+- [x] Implement manual monitor start/stop, singleton prevention, cursor resume and readable failure state; verify live stop/start on blue and fake-journal crash scenarios locally.
+- [x] Provide a manual systemd template with bounded restart settings and runbook instructions; this is not an installed or boot-tested service.
+- [ ] Install and verify the reviewed systemd setup on blue, including boot startup and bounded recovery after a crash.
+- [x] Implement explicit retention cleanup using configured days and preserving evidence referenced by retained alerts; default 60 days. Notification/block storage is not implemented yet.
 - [ ] Implement daily 60-day retention while preserving pending notifications, active blocks and required supporting evidence.
 
-Acceptance: background monitoring survives closing the TUI; records and delivery state survive restart; review changes do not change firewall state. A stopped or failing monitor is never shown as healthy.
+Acceptance: background monitoring survives closing the launching terminal or browser; local records survive restart, and future delivery state must also survive. Review changes do not change firewall state. A stopped or failing monitor is never shown as healthy.
 
 ## 4. Discord delivery — Day 6
 
@@ -84,7 +110,8 @@ Acceptance: provider failure does not lose alerts or stop local monitoring; the 
 - [ ] Add optional public-IP eligibility, simulated VirusTotal adapter, caching, quotas, timeouts and unknown-state handling.
 - [ ] Implement the agreed vendor-count labels and separate SSH alert severity.
 - [ ] Never submit private/sensitive indicators or raw logs. Clearly label mock responses.
-- [ ] Finish report export with evidence, review history, provider provenance and action outcomes when present.
+- [x] Implement local text report export with evidence, rule explanation, review history and live/sample provenance (CLI and HTTP checks).
+- [ ] Extend reports with provider context and action outcomes when those features exist; existing text reports do not establish provider integration.
 
 Acceptance: zero flags is no flags found, lookup failure is unknown, and private VM traffic never causes an external lookup. Reports contain no secrets.
 
@@ -105,7 +132,8 @@ Acceptance: the core demo works before enforcement work starts. No Mac firewall 
 - [ ] Produce the required Gantt chart once preparing the proposal; use relative days until calendar dates are confirmed.
 - [ ] Document the problem, existing-tool comparison and feasibility with verifiable sources.
 - [ ] Keep objectives, algorithms, implemented modules and evidence aligned; distinguish simulated and planned work.
-- [ ] Record test inputs, expected/actual outcomes, screenshots or terminal transcripts and limitations.
+- [x] Record current CLI/VM and local dashboard inputs, expected/actual outcomes and limitations under `docs/verification/`, the diary and issue evidence.
+- [ ] Complete remaining boot/recovery, local-IP dashboard, provider and final-demo evidence as those scenarios are implemented and exercised.
 - [ ] Record both students' meaningful contributions and rehearse each person's explanation.
 - [ ] Apply the confirmed report format when received. Leave faculty questions open until answered.
 - [ ] Freeze features, check secrets are excluded and rehearse the final presentation.
