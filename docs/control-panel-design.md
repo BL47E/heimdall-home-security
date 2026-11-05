@@ -72,7 +72,7 @@ Create original assets with HTML/CSS, SVG or canvas when practical. Mark decorat
 
 Motion is welcome and should be designed intentionally. Prefer a small set of related effects across the panel:
 
-- Links draw a thin underline on hover and keyboard focus; the active page remains identifiable without hover.
+- Sidebar links brighten on hover and show an outline on keyboard focus. The active page uses brighter, medium-weight text. Content links can draw a thin underline on hover and keyboard focus.
 - Terminal art may form from dots or characters during one short entrance, then settle into a readable composition.
 - Expanding evidence, saving settings and changing review status give clear, restrained feedback.
 
