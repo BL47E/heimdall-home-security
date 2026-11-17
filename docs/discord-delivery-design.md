@@ -1,6 +1,6 @@
 # Optional Discord delivery
 
-Status: implementation design for the existing college milestone, prepared 2026-11-07. The design is now implemented in local source and covered by fake-endpoint tests; see [source verification](verification/2026-11-17-source.md). It does not establish live-tested Discord delivery. It follows the [milestone plan](college-milestone-plan.md) and [runtime contract](runtime-contract.md). No real provider is enabled by this design.
+Status: implementation design for the existing college milestone, prepared 2026-11-07. The design is now implemented in local source and covered by fake-endpoint tests; see [source verification](verification/2026-11-17-source.md). Subsequent [live verification](verification/2026-11-17-discord.md) establishes owner-approved real delivery, controlled sender-failure recovery and installed scheduling. It follows the [milestone plan](college-milestone-plan.md) and [runtime contract](runtime-contract.md). The design alone enables no provider; blue was later configured with the owner-approved test destination.
 
 ## Purpose and boundary
 
@@ -38,4 +38,4 @@ After an outage, format pending findings together as a list and split only to me
 - Cleanup preserves pending alert/evidence references; delivered history can expire normally.
 - Secret files are private, production URL restrictions hold, redirects are rejected and no secret appears in outputs or evidence.
 
-Scheduled delivery, provider UI and report context must be marked implemented only when their integration checks pass. A later owner-authorized live test remains separate from this fake-endpoint implementation stage.
+Scheduled delivery was subsequently installed and live-tested on blue; provider UI controls and provider report context remain separate follow-ups. The owner-authorized live evidence remains separate from the fake-endpoint implementation tests.

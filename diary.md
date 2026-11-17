@@ -1,5 +1,13 @@
 # Heimdall development diary
 
+## 2026-11-17 — Real Discord alerts and scheduled delivery
+
+The owner approved creating Heimdall's webhook in the new Blaze's TEST server's #general channel, private storage on blue and transmission of controlled SSH summary metadata. Computer Use created/named the webhook and later observed three delivered messages. The URL stayed out of code, evidence and command output. Configuration was passed through hidden input to the shell CLI; the credential remained mode 0600 on blue.
+
+Red generated seven deliberate failed-password attempts with strict host checking. Three produced no alert; the fourth created a new alert and Discord accepted its notice. Review/fifth-failure reopening queued another notice. A disposable sender-only socket fault retained that notice, recorded ambiguity/backoff and left the monitor healthy. A fresh CLI process respected the saved retry time; a sixth failure after another review queued a second reopening notice. Recovery delivered both together. This was controlled transport fault injection, not a real Discord outage or network change.
+
+Installed and enabled the reviewed unprivileged Discord service/timer after Ubuntu unit verification. The seventh failure reopened the reviewed alert and the timer delivered it without a manual flush at 16:10:09 IST. Final state: four delivered notices in three messages, zero pending; monitor still healthy under PID 21431, with 136 events and three alerts. Existing earlier evidence and alerts were preserved. [Verification and limits](docs/verification/2026-11-17-discord.md) distinguish real delivery from injected failure and source/mock coverage. No runtime code change, firewall change, new account permission, VirusTotal or blocking accompanied this connection.
+
 ## 2026-11-17 — Saved source checkpoint and deployed service controls/cleanup
 
 Verified the existing local service, retention and optional Discord implementation. Fixed the Discord flush concurrency failure by keeping each run bounded to its initial queue snapshot; the existing regression now passes. Updated the shell smoke test's obsolete provider expectation. Saved the source and earlier VM evidence in commit `ecaec12` on `codex/service-cleanup-deployment`. Mac tests: 65 passed, one Ubuntu-only skip; blue's checksum-verified package: all 66 passed, plus shell/configuration and 19 monitor scenarios. Ubuntu accepted the resolved units.

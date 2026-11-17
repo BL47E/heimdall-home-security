@@ -101,15 +101,17 @@ Acceptance: background monitoring survives closing the launching terminal or bro
 
 ## 4. Discord delivery — Day 6
 
-Local queue, transport and fake-endpoint tests are implemented and checked in the [November 17 source checkpoint](docs/verification/2026-11-17-source.md). The items below remain end-to-end acceptance gates; no real Discord destination is configured or live-tested.
+Local queue, transport and fake-endpoint tests are implemented and checked in the [November 17 source checkpoint](docs/verification/2026-11-17-source.md). Real delivery to the owner-approved test server, controlled sender-only failure/recovery, queue persistence across fresh sender processes and scheduled delivery passed on November 17 ([evidence](docs/verification/2026-11-17-discord.md)). The injected failure was not a real Discord or VM network outage.
 
-- [ ] Configure the optional webhook securely; exclude secrets from source, logs, reports and the interface.
-- [ ] Send informative live alerts and notifications when new activity reopens a reviewed alert.
-- [ ] Persist failed deliveries; retry promptly when Discord is reachable using timeouts/backoff and provider rate limits.
-- [ ] Send outage backlog as a list, splitting only where necessary; mark accepted messages delivered.
-- [ ] Verify offline operation, recovery, restart and ambiguous delivery outcomes with a fake endpoint before a configured live test.
+- [x] Configure the optional webhook securely; exclude secrets from source, logs, reports and the interface.
+- [x] Send informative live alerts and notifications when new activity reopens a reviewed alert.
+- [x] Persist failed deliveries; retry promptly when Discord is reachable using timeouts/backoff and provider rate limits.
+- [x] Send outage backlog as a list, splitting only where necessary; mark accepted messages delivered.
+- [x] Verify offline operation, recovery, restart and ambiguous delivery outcomes with a fake endpoint before a configured live test.
 
 Acceptance: provider failure does not lose alerts or stop local monitoring; the backlog is grouped and delivery status is truthful.
+
+- [ ] Observe sender-timer startup after a new VM reboot; source scheduling is installed/enabled, but that reboot check was not repeated.
 
 ## 5. Reputation and reports — Day 7
 

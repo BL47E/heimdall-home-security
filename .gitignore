@@ -13,5 +13,6 @@ logs/
 state/
 .runtime/
 web-token
+discord-webhook
 .pytest_cache/
 dist/

@@ -153,3 +153,30 @@ Blue's private backups are under `~/heimdall/evidence/2026-11-17/` and `attempt2
 To stop daily scheduling without deleting history, run `sudo systemctl disable --now heimdall-cleanup.timer` in blue's terminal. `systemctl list-timers heimdall-cleanup.timer --no-pager` shows its next trigger. `systemctl show heimdall-cleanup.service -p Result -p ExecMainStatus` shows the latest cleanup result. The current service runs daily with up to fifteen minutes of randomized delay and one catch-up after downtime; active-block retention remains future work.
 
 A rollback must restore the old monitor unit and matching launcher together, reload systemd and start the monitor; stop the newer dashboard before launching the older one. Do not restore an old state archive during a routine code rollback, because doing so would discard newer observations. Preserve state and inspect compatibility first.
+
+## Discord on blue
+
+The owner-approved Heimdall webhook posts summaries to Blaze's TEST → #general. [Live verification](verification/2026-11-17-discord.md) covers threshold/reopening alerts, a controlled sender-only transport failure, grouped recovery and timer-driven delivery. Usernames, raw SSH messages and credentials are excluded from notification text. This deliberately shares summary metadata, including the lab source IP, with Discord.
+
+In blue's terminal, `~/heimdall/heimdall discord status` shows configuration, pending/delivered notice counts, retry timing and the latest result. Counts refer to notices; several notices may share one grouped message. `discord flush` attempts eligible work immediately, respecting saved backoff. A delivery error does not stop monitoring. An ambiguous result means remote acceptance was not established; a retry can duplicate delivery.
+
+The enabled `heimdall-discord.timer` invokes the unprivileged fixed sender service on boot and every fifteen seconds after the previous invocation finishes. Inspect `systemctl list-timers heimdall-discord.timer --no-pager` and `systemctl show heimdall-discord.service -p Result -p ExecMainStatus`. It needs no running browser. Startup after a fresh reboot remains a separate observation to capture.
+
+To stop external delivery, run `~/heimdall/heimdall discord disable`; local monitoring and pending evidence remain. To stop scheduled checks too, run `sudo systemctl disable --now heimdall-discord.timer`. Re-enable only for the approved destination with `~/heimdall/heimdall discord enable` and `sudo systemctl enable --now heimdall-discord.timer`. Disabling does not erase pending notices or the private credential.
+
+For an owner-approved replacement destination, use hidden input in blue's terminal, keeping the URL out of shell history and chat:
+
+```sh
+python3 - <<'PYTHON'
+import getpass
+import os
+import subprocess
+subprocess.run(
+    [os.path.expanduser("~/heimdall/heimdall"), "discord", "configure"],
+    input=getpass.getpass("Discord webhook URL (hidden): ") + "\n",
+    text=True, check=True,
+)
+PYTHON
+```
+
+Configuration starts disabled; inspect status and explicitly enable after checking the destination. The private `~/.local/state/heimdall/discord-webhook` file must remain mode 0600 and must not enter Git, reports or screenshots. Correct a deleted/rejected destination through configuration; repeatedly flushing it will not repair its credentials. A timer exit status of zero alone does not prove delivery—also inspect provider status and pending work.
