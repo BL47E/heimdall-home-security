@@ -1,4 +1,5 @@
 # State transitions for supported SSH password outcomes. Input events are data.
+include "notifications";
 def apply_event($incoming; $now):
   if any(.events[]; .id == $incoming.id) then .stats.duplicates += 1
   else
@@ -24,11 +25,13 @@ def apply_event($incoming; $now):
         .events += [$e] |
         [.events[] | select(.outcome == "failure" and .source_ip == $e.source_ip and .provenance == $e.provenance and .timestamp != null and .timestamp >= $next.burst_start and .timestamp >= ($e.timestamp - $config.window_seconds) and .timestamp <= $e.timestamp)] as $window |
         if $next.active_alert != null then
+          (any(.alerts[]; .id == $next.active_alert and .review_status == "reviewed")) as $reopens |
           .alerts |= map(if .id == $next.active_alert then
             .last_seen = $e.timestamp | .failure_count += 1 | .event_ids += [$e.id] |
             if .review_status == "reviewed" then .review_status = "needs_review" | .review_history += [{timestamp:$now,status:"needs_review",reason:"new_failure"}] else . end |
             .explanation = "\(.failure_count) failed password attempts in this continuous burst; rule initially matched \(.rule.threshold) failures within \(.rule.window_seconds) seconds."
-          else . end) | .sources[$key] = $next
+          else . end) | .sources[$key] = $next |
+          if $reopens then enqueue_notice($next.active_alert; $e; "reopened"; $now) else . end
         elif ($window|length) >= $config.threshold then
           ("ssh-" + $e.id[0:24]) as $aid |
           .alerts += [{id:$aid,source_ip:$e.source_ip,severity:"MEDIUM",review_status:"needs_review",
@@ -37,7 +40,8 @@ def apply_event($incoming; $now):
             explanation:"\($window|length) failed password attempts from this source within \($config.window_seconds) seconds.",
             recommendation:"Review the attempted accounts and supporting SSH records. This rule is not proof of compromise.",
             event_ids:[$window[].id],review_history:[],provenance:$e.provenance}] |
-          .sources[$key] = ($next + {active_alert:$aid})
+          .sources[$key] = ($next + {active_alert:$aid}) |
+          enqueue_notice($aid; $e; "created"; $now)
         else .sources[$key] = $next end
       end
     end

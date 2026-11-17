@@ -2,15 +2,18 @@
 
 Current scope: [college milestone](docs/college-milestone-plan.md), [ADR 0002](docs/adr/0002-shell-first-college-milestone.md), the owner's [dashboard extension in ADR 0003](docs/adr/0003-shell-monitor-with-local-dashboard.md) and [evaluation alignment](docs/evaluation-alignment.md). The broader blueprint remains future scope where the milestone overrides it.
 
-Status: CLI and dashboard 0.1.0 are deployed on blue. Live status, preserved alert history, owner authentication and Host-Only access were verified on 2026-11-05; see [the diary](diary.md) and [earlier CLI verification](docs/verification/2026-11-04-cli-blue.md). Boot/crash recovery and a controlled red-to-blue alert demonstration remain open. GitHub Issues are the implementation tracker; see the [build backlog](docs/build-backlog.md). Track actual contribution by both students.
+Status: CLI and dashboard 0.1.0 are deployed on blue. Live status, preserved alert history, owner authentication and Host-Only access were verified on 2026-11-05; see [the diary](diary.md) and [earlier CLI verification](docs/verification/2026-11-04-cli-blue.md). Real red-to-blue threshold alerting, review reopening and manual console recovery after a monitor crash were verified on 2026-11-07 ([evidence](docs/verification/2026-11-07-red-blue-recovery.md)). Boot startup and bounded automatic systemd crash recovery were verified on blue ([service evidence](docs/verification/2026-11-07-systemd.md)). GitHub Issues are the implementation tracker; see the [build backlog](docs/build-backlog.md). Track actual contribution by both students.
 
-Progress reconciled on 2026-11-05 against [the diary](diary.md), [CLI/VM verification](docs/verification/2026-11-04-cli-blue.md), [dashboard verification](docs/verification/2026-11-05-dashboard.md) and [cleanup issue 14](https://github.com/BL47E/heimdall-home-security/issues/14). Planning checkboxes record agreed choices; implementation checkboxes identify their evidence below. The VM power, addresses and blue monitor status were rechecked live on 2026-11-05; see the diary. Earlier lab observations do not establish current state beyond that checkpoint.
+Latest recorded checkpoint, November 17 after Discord testing: 136 events, three alerts, four delivered notices in three Discord messages and zero pending notices. Monitoring stayed healthy. See [current status](docs/status.md) and [Discord evidence](docs/verification/2026-11-17-discord.md).
+
+Progress reconciled on 2026-11-17 against the [source checkpoint](docs/verification/2026-11-17-source.md), [live deployment evidence](docs/verification/2026-11-17-deployment.md) and [Discord verification](docs/verification/2026-11-17-discord.md). Planning checkboxes record agreed choices; implementation checkboxes identify their evidence. GitHub decision tickets remain open until owner answers resolve them.
 
 ## Resume the lab
 
-- At the documentation handoff, Parallels reported blue and red stopped. Start blue, confirm its current Host-Only address and start the monitor and dashboard manually. [Runbook](docs/runbook.md)
-- The last verified dashboard address from the Mac was `http://10.37.129.3:8765`. The latest browser checks covered the sidebar at phone, tablet and desktop widths. [Deployment and sidebar evidence](diary.md)
-- Next live checks are the controlled red-to-blue alert demonstration, console recovery and systemd boot and crash recovery. The configuration validation follow-up is tracked separately below.
+- Blue remains at `10.37.129.3`; red at `10.37.129.4`. Both were observed running on November 17. Recheck addresses and service health when resuming.
+- Blue's deployed release is `/home/bl47eheim/heimdall/releases/0.1.0-ecaec12/heimdall-0.1.0`, launched through `~/heimdall/heimdall`. The monitor, cleanup timer and Discord sender timer are enabled; the dashboard was started manually at `http://10.37.129.3:8765`.
+- Service-aware CLI/browser controls are deployed. Existing Ubuntu policy denies unprivileged start/stop: the interface shows administrator console instructions and never starts a separate reader. Use `sudo systemctl start|stop|restart heimdall-monitor` in blue's terminal.
+- The daily cleanup timer is installed, has triggered, and the cleanup service completed successfully. State is backed up privately on blue. Blocking remains unimplemented and its recovery gate remains open.
 
 ## Panel design and repository cleanup — completed locally and saved
 
@@ -54,15 +57,17 @@ Progress reconciled on 2026-11-05 against [the diary](diary.md), [CLI/VM verific
 ## 1. Ubuntu lab and log contract — Day 1
 
 - [x] Set up two Ubuntu ARM64 VMs with Host-Only test adapters and separate Shared adapters; record observed environment and addresses in the diary.
-- [ ] Demonstrate and record recovery through the VM console. Shared networking is not full isolation from the host or LAN.
+- [x] Demonstrate manual monitor recovery through the VM console after a forced crash, preserving counts and available coverage ([2026-11-07 evidence](docs/verification/2026-11-07-red-blue-recovery.md)). Shared networking is not full isolation from the host or LAN.
+- [ ] Verify fresh console login and recovery for the reviewed SSH-block scenario before enabling any real block.
 - [x] Verify controlled red-to-blue SSH access over Host-Only, including host-key checking and source/destination addresses.
 - [x] Record separate outbound routes through the Shared adapters.
 - [ ] Verify and record separate outbound connectivity where configured.
 - [x] Inspect real successful and invalid-user failed-password records; identify `journalctl -u ssh`, observed `sshd-session` messages, displayed timestamps/time zone and non-root read access in the tested account.
 - [x] Export structured sanitized successful, invalid-user and existing-account wrong-password samples; fixture documentation records omitted fields and pseudonymized cursors.
-- [x] Document dependencies, startup/shutdown, packaging and optional manual service setup/removal in the runbook; the service template remains uninstalled.
+- [x] Document dependencies, startup/shutdown, packaging and optional manual service setup/removal in the runbook; a resolved service instance is now installed and verified on blue.
 - [x] Capture synthetic boundary/multiple-IP/missing-field/malformed scenarios and real Mac-to-blue three/four-failure evidence.
-- [ ] Capture any additional real expired-window, multiple-IP and red-to-blue end-to-end evidence required for the final demonstration.
+- [x] Capture real red-to-blue three/four-failure alerting, review/fifth-failure reopening, separate retained Mac-source alert and manual crash-recovery evidence ([2026-11-07](docs/verification/2026-11-07-red-blue-recovery.md)).
+- [ ] Capture additional real expired-window and concurrent multiple-IP scenarios required for the final demonstration; retained alerts from separate sessions do not establish concurrent-window behavior.
 
 Acceptance: representative real logs and repeatable offline samples are available; tests remain on the VM network. Record chosen versions and environment rather than guessing log paths.
 
@@ -78,27 +83,35 @@ Acceptance: three failures do not alert, the fourth within the window does, expi
 
 ## 3. Local investigations and management — Days 4–5
 
-- [x] Implement restricted local storage, atomic updates and OS advisory locking; Ubuntu tests exercise crash recovery, and live stop/start preserves journal state. Boot recovery remains below.
+- [x] Implement restricted local storage, atomic updates and OS advisory locking; Ubuntu tests exercise crash recovery, and live stop/start preserves journal state. Boot recovery is recorded in the service checks below.
 - [x] Add alert listing, inspection, review/reopen, review history and simple readable report output (local CLI/HTTP tests).
 - [x] Reopen a reviewed active alert on new failures; a later burst becomes a new alert (synthetic tests).
 - [x] Add shared CLI/browser operations and honest monitoring/provider status (real HTTP-to-CLI tests); optional TUI remains planned.
 - [x] Implement manual monitor start/stop, singleton prevention, cursor resume and readable failure state; verify live stop/start on blue and fake-journal crash scenarios locally.
-- [x] Provide a manual systemd template with bounded restart settings and runbook instructions; this is not an installed or boot-tested service.
-- [ ] Install and verify the reviewed systemd setup on blue, including boot startup and bounded recovery after a crash.
-- [x] Implement explicit retention cleanup using configured days and preserving evidence referenced by retained alerts; default 60 days. Notification/block storage is not implemented yet.
-- [ ] Implement daily 60-day retention while preserving pending notifications, active blocks and required supporting evidence.
+- [x] Provide a manual systemd template with bounded restart settings and runbook instructions; the resolved blue instance is now installed and boot-tested.
+- [x] Install and verify the reviewed systemd setup on blue, including boot startup and bounded recovery after a crash ([2026-11-07 service evidence](docs/verification/2026-11-07-systemd.md)).
+- [x] Align source CLI/browser monitor controls with the fixed systemd unit, identity checks and noninteractive authorization failure handling (local fake-manager/HTTP checks and November 17 live deployment checks).
+- [x] Deploy and verify service-aware CLI/browser controls on blue, including real authorization denial without fallback and administrator stop/start with truthful status ([evidence](docs/verification/2026-11-17-deployment.md)).
+- [x] Implement explicit retention cleanup using configured days and preserving evidence referenced by retained alerts; default 60 days. Local cleanup now preserves pending Discord notifications and their evidence; active blocks remain unimplemented.
+- [x] Provide daily cleanup service/timer templates, pass Ubuntu unit verification and install/enable them on blue; verify a timer trigger and successful service execution.
+- [x] Implement and activate daily 60-day retention, preserving pending notifications and required supporting evidence; synthetic tests cover expired records and pending deliveries.
+- [ ] Preserve active block records when enforcement state is designed and implemented; no blocks exist yet.
 
 Acceptance: background monitoring survives closing the launching terminal or browser; local records survive restart, and future delivery state must also survive. Review changes do not change firewall state. A stopped or failing monitor is never shown as healthy.
 
 ## 4. Discord delivery — Day 6
 
-- [ ] Configure the optional webhook securely; exclude secrets from source, logs, reports and the interface.
-- [ ] Send informative live alerts and notifications when new activity reopens a reviewed alert.
-- [ ] Persist failed deliveries; retry promptly when Discord is reachable using timeouts/backoff and provider rate limits.
-- [ ] Send outage backlog as a list, splitting only where necessary; mark accepted messages delivered.
-- [ ] Verify offline operation, recovery, restart and ambiguous delivery outcomes with a fake endpoint before a configured live test.
+Local queue, transport and fake-endpoint tests are implemented and checked in the [November 17 source checkpoint](docs/verification/2026-11-17-source.md). Real delivery to the owner-approved test server, controlled sender-only failure/recovery, queue persistence across fresh sender processes and scheduled delivery passed on November 17 ([evidence](docs/verification/2026-11-17-discord.md)). The injected failure was not a real Discord or VM network outage.
+
+- [x] Configure the optional webhook securely; exclude secrets from source, logs, reports and the interface.
+- [x] Send informative live alerts and notifications when new activity reopens a reviewed alert.
+- [x] Persist failed deliveries; retry promptly when Discord is reachable using timeouts/backoff and provider rate limits.
+- [x] Send outage backlog as a list, splitting only where necessary; mark accepted messages delivered.
+- [x] Verify offline operation, recovery, restart and ambiguous delivery outcomes with a fake endpoint before a configured live test.
 
 Acceptance: provider failure does not lose alerts or stop local monitoring; the backlog is grouped and delivery status is truthful.
+
+- [ ] Observe sender-timer startup after a new VM reboot; source scheduling is installed/enabled, but that reboot check was not repeated.
 
 ## 5. Reputation and reports — Day 7
 
@@ -128,7 +141,7 @@ Acceptance: the core demo works before enforcement work starts. No Mac firewall 
 - [ ] Document the problem, existing-tool comparison and feasibility with verifiable sources.
 - [ ] Keep objectives, algorithms, implemented modules and evidence aligned; distinguish simulated and planned work.
 - [x] Record current CLI/VM and local dashboard inputs, expected/actual outcomes and limitations under `docs/verification/`, the diary and issue evidence.
-- [ ] Complete remaining boot/recovery, provider and final-demo evidence as those scenarios are implemented and exercised.
+- [ ] Capture the remaining live rule scenarios, sender-timer reboot startup, later unattended retention/catch-up and final-demo evidence; preserve already completed boot/crash and Discord results.
 - [ ] Record both students' meaningful contributions and rehearse each person's explanation.
 - [ ] Apply the confirmed report format when received. Leave faculty questions open until answered.
 - [ ] Freeze features, check secrets are excluded and rehearse the final presentation.

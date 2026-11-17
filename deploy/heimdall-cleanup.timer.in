@@ -1,0 +1,14 @@
+# Manual template only. Review the resolved cleanup service before enabling.
+# Persistent catches up once after downtime; it does not replay every missed day.
+[Unit]
+Description=Daily Heimdall local record retention cleanup
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=15m
+AccuracySec=1m
+Unit=heimdall-cleanup.service
+
+[Install]
+WantedBy=timers.target

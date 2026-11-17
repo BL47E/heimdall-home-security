@@ -68,6 +68,18 @@ class Server(ThreadingHTTPServer):
                 timeout=10,
             )
             if p.returncode:
+                if (
+                    p.returncode == 77
+                    and args in (["monitor", "start"], ["monitor", "stop"])
+                    and p.stderr.startswith("HEIMDALL_SERVICE_CONTROL:")
+                ):
+                    raise ValueError(
+                        "Monitor service control failed. Check the monitor status and "
+                        "the unit's configured owner, release and state paths. An "
+                        "administrator may need to run: sudo systemctl "
+                        + args[1]
+                        + " heimdall-monitor.service"
+                    )
                 raise ValueError(
                     "Heimdall command failed. Check the local CLI and state."
                 )

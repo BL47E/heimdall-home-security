@@ -1,6 +1,8 @@
 # Running Heimdall
 
-This runbook covers the shell monitor and owner-requested local browser dashboard described in [ADR 0003](adr/0003-shell-monitor-with-local-dashboard.md). The first CLI is implemented and [tested on blue](verification/2026-11-04-cli-blue.md), including real fourth-failure alerts and restart persistence. The dashboard was verified on blue over loopback and from the Mac over Host-Only. [Deployment evidence](../diary.md#2026-11-05--dashboard-deployed-and-verified-on-blue) Commands and schemas follow [the runtime contract](runtime-contract.md); boot/systemd recovery and faculty acceptance of the dashboard remain open.
+Current operating checkpoint: [November 17 status](status.md), [deployment](verification/2026-11-17-deployment.md) and [Discord](verification/2026-11-17-discord.md). Monitor, cleanup and sender are enabled on blue; the dashboard starts manually. Dated records are not a fresh health probe.
+
+This runbook covers the shell monitor and owner-requested local browser dashboard described in [ADR 0003](adr/0003-shell-monitor-with-local-dashboard.md). The first CLI is implemented and [tested on blue](verification/2026-11-04-cli-blue.md), including real fourth-failure alerts and restart persistence. The dashboard was verified on blue over loopback and from the Mac over Host-Only. [Deployment evidence](../diary.md#2026-11-05--dashboard-deployed-and-verified-on-blue) Commands and schemas follow [the runtime contract](runtime-contract.md); boot startup and bounded systemd recovery were verified on blue on 2026-11-07 ([evidence](verification/2026-11-07-systemd.md)); faculty acceptance of the dashboard remains open.
 
 ## What runs where
 
@@ -29,9 +31,9 @@ If the owner account cannot read SSH's system journal, an administrator must rev
 
 The current application version is `0.1.0`. From its release directory, `./bin/heimdall help` lists the commands, `./bin/heimdall version` prints the version, and `./bin/heimdall demo` runs a labelled synthetic walkthrough without changing live state. The CLI prints JSON for machine-readable operations; pipe a result to `jq` when inspecting it. `config history` shows saved configuration changes.
 
-For the verified installation on blue, use `~/heimdall/heimdall help` or `~/heimdall/heimdall status` from any directory. This launcher points to the release recorded in the [dashboard deployment entry](../diary.md#2026-11-05--dashboard-deployed-and-verified-on-blue). The previous launcher is saved as `~/heimdall/heimdall.before-dashboard`. The monitor was started manually and verified after the deployment SSH connection closed. After booting blue, check its status and start it manually if needed.
+For the verified installation on blue, use `~/heimdall/heimdall help` or `~/heimdall/heimdall status` from any directory. This launcher now points to `/home/bl47eheim/heimdall/releases/0.1.0-ecaec12/heimdall-0.1.0`, deployed and verified on November 17 ([evidence](verification/2026-11-17-deployment.md)). The latest previous launcher is saved privately under `~/heimdall/evidence/2026-11-17/attempt2/heimdall-launcher.before`; the older `heimdall.before-dashboard` checkpoint is historical. The monitor is now managed by the enabled `heimdall-monitor.service` on blue. Check `systemctl status heimdall-monitor --no-pager` and `~/heimdall/heimdall status` after boot. Use `sudo systemctl start|stop|restart heimdall-monitor` to manage this installed service; the vertical bars mean choose one action. Browser/CLI controls now validate and address the fixed systemd unit. Existing Ubuntu authorization denies unprivileged start/stop, returning an administrator instruction instead of starting a separate process. Use the console systemctl commands for actual lifecycle changes on blue.
 
-In blue's terminal, enter the repository directory before running these commands:
+For a new standalone setup with no installed monitor service, enter its release directory and run these commands. On blue's existing service-managed installation, use the administrator systemctl commands above instead of standalone startup:
 
 ```sh
 ./bin/heimdall init
@@ -40,7 +42,7 @@ In blue's terminal, enter the repository directory before running these commands
 ./bin/heimdall status
 ```
 
-`init` prepares private state with defaults. `start` starts a background reader of `journalctl -u ssh`; `status` reports whether that reader is alive and whether journal coverage is available. A running browser is not evidence that monitoring is healthy. Initial monitoring starts at the current journal position; subsequent starts use the saved cursor, a journal record reference that prevents replay from being counted twice. Cursor loss, unreadable logs or a terminated reader must remain visible in status.
+`init` prepares private state with defaults. With no installed service, `start` starts a background reader of `journalctl -u ssh`; `status` reports whether that reader is alive and whether journal coverage is available. A running browser is not evidence that monitoring is healthy. Initial monitoring starts at the current journal position; subsequent starts use the saved cursor, a journal record reference that prevents replay from being counted twice. Cursor loss, unreadable logs or a terminated reader must remain visible in status.
 
 Inspect findings through the same commands used by the dashboard:
 
@@ -62,15 +64,23 @@ To inspect, review or export an alert, replace `ALERT_ID` with an ID returned by
 
 An alert's review status records the owner's investigation progress. New failures reopen a reviewed alert while its burst remains active. Review commands do not change SSH access. Configuration accepts only bounded integers: threshold 2–100, window 30–3600 seconds and retention 1–365 days. Changes apply to later events; existing findings retain their rule settings.
 
-Stop the background reader with `./bin/heimdall monitor stop`. Foreground operation for a service manager is `./bin/heimdall monitor run`.
+On a standalone installation, stop the background reader with `./bin/heimdall monitor stop`. With a matching installed unit, start/stop addresses systemd and may require administrator console action. Foreground `./bin/heimdall monitor run` is owned by that service and cannot be used to bypass it.
 
-Transaction and monitor locks use an operating-system advisory lock through a small Python standard-library helper. A process crash releases its lock automatically; the next monitor owns and cleans only its known scratch files. Keep `.transaction.lock` and `.monitor.lock` in place while any Heimdall process runs. Never remove locks to bypass an active writer. Mock crash/restart tests establish local recovery behavior; boot and systemd recovery still need Ubuntu evidence.
+Transaction and monitor locks use an operating-system advisory lock through a small Python standard-library helper. A process crash releases its lock automatically; the next monitor owns and cleans only its known scratch files. Keep `.transaction.lock` and `.monitor.lock` in place while any Heimdall process runs. Never remove locks to bypass an active writer. Mock crash/restart tests establish local behavior. Real blue service crash recovery, retry limiting and boot startup are recorded in [service evidence](verification/2026-11-07-systemd.md).
 
 ## Packaging a build for the VM
 
 On the development Mac, run `./scripts/package.sh` from the repository. It writes `dist/heimdall-0.1.0.tar.gz` and a SHA-256 checksum file. Only the allowlisted application, tests, synthetic fixtures and selected documentation are packaged; local evidence, tokens and caches are excluded. Transfer both files to blue using verified SSH, check `sha256sum -c heimdall-0.1.0.tar.gz.sha256` there, then extract into a fresh release directory under `~/heimdall/releases`. Keep an earlier release and live state intact when updating. Start the new build using its own `bin/heimdall` path; no system-wide installation or PATH edit is required.
 
-Retention cleanup is currently explicit: `./bin/heimdall cleanup`. It uses the configured retention period; daily scheduling remains planned. Do not claim the uninstalled monitor service template schedules cleanup.
+Retention cleanup runs explicitly with `./bin/heimdall cleanup`. It uses the configured retention period. The daily cleanup timer is installed and enabled on blue. It uses the same owner, release and state directory as the monitor; the monitor service itself does not schedule cleanup.
+
+### Optional daily retention schedule
+
+`deploy/heimdall-cleanup.service.in` and `deploy/heimdall-cleanup.timer.in` are manual templates. Resolve the service's owner, group, absolute release directory and private state directory to the same values as the monitor. The cleanup command needs no journal group and runs as that owner with writes limited to the state directory. It does not start, stop or restart monitoring.
+
+The timer runs daily with up to fifteen minutes of randomized delay. `Persistent=true` requests one catch-up run after downtime, rather than one run for every missed day. Review the resolved units and run `systemd-analyze verify` on Ubuntu before installation. After explicit owner approval, install only those reviewed units, reload systemd and enable `heimdall-cleanup.timer`; inspect `systemctl list-timers heimdall-cleanup.timer` and the cleanup service journal to verify actual execution. The reviewed schedule was activated on blue on November 17, with a timer trigger and successful cleanup recorded in [deployment evidence](verification/2026-11-17-deployment.md). This section explains the setup; do not reinstall it when simply resuming the lab.
+
+Local rendered-unit tests verify the command against disposable state, including preservation of supporting evidence and review history for retained alerts. Local pending-notification retention is implemented and covered by synthetic delivery tests; active block retention remains a future enforcement obligation because blocks are not implemented.
 
 ## Browser login on blue
 
@@ -124,14 +134,51 @@ The fixture is synthetic, not an export of blue's journal. Its provenance notes 
 
 ## Optional manual systemd setup
 
-`deploy/heimdall-monitor.service.in` is an **uninstalled template**, not an active service. systemd is Ubuntu's service manager: it can start the monitor at boot and attempt a limited number of restarts after failure. It does not run the dashboard or enable blocking.
+The current source includes service-aware monitor controls with automatic detection of the fixed `heimdall-monitor.service`. These changes are deployed on blue and have local fake-manager, CLI/HTTP and real service checks. They verify the installed unit's release, state directory and owner, then request noninteractive service control. Without an existing authorization policy, the command fails with a manual `sudo systemctl` instruction. It never stores a sudo password or falls back to an unsupervised monitor. Use the explicit administrator console systemctl commands above on blue; service-aware controls do not add a privilege policy.
+
+`deploy/heimdall-monitor.service.in` is a template requiring per-host review. A resolved instance is installed and enabled on blue, with boot/crash/retry-limit checks recorded in [service evidence](verification/2026-11-07-systemd.md). systemd is Ubuntu's service manager: it can start the monitor at boot and attempt a limited number of restarts after failure. It does not run the dashboard or enable blocking.
 
 Before installing, choose the owner account, absolute repository path and private absolute state directory. Replace every `@...@` placeholder, inspect the resulting file and verify its commands manually under that account. The template grants the service journal-read access using `SupplementaryGroups=systemd-journal`; an administrator should review that broader read access. The state directory must already exist and belong to the selected user.
 
 Only after manual review, place the completed unit at `/etc/systemd/system/heimdall-monitor.service`, run `sudo systemctl daemon-reload`, and choose whether to start it with `sudo systemctl start heimdall-monitor`. Enable boot startup separately with `sudo systemctl enable heimdall-monitor` when ready. Do not run a separate CLI-started monitor alongside the service. Check both `systemctl status heimdall-monitor` and `./bin/heimdall status` under the configured account/state path. A daemon restart is not evidence of complete journal coverage.
 
-To undo the service setup, stop and disable that unit, remove only its reviewed unit file, and reload systemd. Keep the state directory until the owner decides how to archive its records. No setup command in this section has been executed automatically.
+To undo the service setup, stop and disable that unit, remove only its reviewed unit file, and reload systemd. Keep the state directory until the owner decides how to archive its records. The resolved blue unit was first installed with owner authorization on November 7 and updated for the new release on November 17; this section is not an instruction to reinstall it. Blue uses its existing owner journal permissions without the template’s additional systemd-journal group.
 
 ## Verification and remaining evidence
 
-Record exact checks and outcomes with the implementation issue. At minimum, verify three versus four failures, window expiry, separate IPs, malformed fields, duplicate replay, review/reopen, persistent restart state, invalid configuration and unauthorized browser requests. Real blue-VM journal parsing, access denial, cursor resumption, boot/crash recovery and controlled red-to-blue tests require separate live evidence. Faculty questions about permitted tools, final report, deadline and presentation remain open.
+Record exact checks and outcomes with the implementation issue. At minimum, verify three versus four failures, window expiry, separate IPs, malformed fields, duplicate replay, review/reopen, persistent restart state, invalid configuration and unauthorized browser requests. Completed live journal, cursor, service and red-to-blue results are linked in the [verification index](verification/README.md). Remaining work includes additional real expired-window/concurrent-source/success-correlation scenarios, sender-timer reboot startup and later unattended cleanup/catch-up; those cases are not established by the completed tests. Faculty questions about permitted tools, final report, deadline and presentation remain open.
+
+## November 17 deployment recovery
+
+Blue's private backups are under `~/heimdall/evidence/2026-11-17/` and `attempt2/`: previous unit and launcher, plus `state-before.json` and a full private state archive. Keep them private because the archive includes authentication material. The old release remains at `/home/bl47eheim/heimdall/releases/0.1.0.lzc7GK/heimdall-0.1.0`. The current release is identified by its source commit and archive checksum in the deployment evidence, even though both releases report application version 0.1.0.
+
+To stop daily scheduling without deleting history, run `sudo systemctl disable --now heimdall-cleanup.timer` in blue's terminal. `systemctl list-timers heimdall-cleanup.timer --no-pager` shows its next trigger. `systemctl show heimdall-cleanup.service -p Result -p ExecMainStatus` shows the latest cleanup result. The current service runs daily with up to fifteen minutes of randomized delay and one catch-up after downtime; active-block retention remains future work.
+
+A rollback must restore the old monitor unit and matching launcher together, reload systemd and start the monitor; stop the newer dashboard before launching the older one. Do not restore an old state archive during a routine code rollback, because doing so would discard newer observations. Preserve state and inspect compatibility first.
+
+## Discord on blue
+
+The owner-approved Heimdall webhook posts summaries to Blaze's TEST → #general. [Live verification](verification/2026-11-17-discord.md) covers threshold/reopening alerts, a controlled sender-only transport failure, grouped recovery and timer-driven delivery. Usernames, raw SSH messages and credentials are excluded from notification text. This deliberately shares summary metadata, including the lab source IP, with Discord.
+
+In blue's terminal, `~/heimdall/heimdall discord status` shows configuration, pending/delivered notice counts, retry timing and the latest result. Counts refer to notices; several notices may share one grouped message. `discord flush` attempts eligible work immediately, respecting saved backoff. A delivery error does not stop monitoring. An ambiguous result means remote acceptance was not established; a retry can duplicate delivery.
+
+The enabled `heimdall-discord.timer` invokes the unprivileged fixed sender service on boot and every fifteen seconds after the previous invocation finishes. Inspect `systemctl list-timers heimdall-discord.timer --no-pager` and `systemctl show heimdall-discord.service -p Result -p ExecMainStatus`. It needs no running browser. Startup after a fresh reboot remains a separate observation to capture.
+
+To stop external delivery, run `~/heimdall/heimdall discord disable`; local monitoring and pending evidence remain. To stop scheduled checks too, run `sudo systemctl disable --now heimdall-discord.timer`. Re-enable only for the approved destination with `~/heimdall/heimdall discord enable` and `sudo systemctl enable --now heimdall-discord.timer`. Disabling does not erase pending notices or the private credential.
+
+For an owner-approved replacement destination, use hidden input in blue's terminal, keeping the URL out of shell history and chat:
+
+```sh
+python3 - <<'PYTHON'
+import getpass
+import os
+import subprocess
+subprocess.run(
+    [os.path.expanduser("~/heimdall/heimdall"), "discord", "configure"],
+    input=getpass.getpass("Discord webhook URL (hidden): ") + "\n",
+    text=True, check=True,
+)
+PYTHON
+```
+
+Configuration starts disabled; inspect status and explicitly enable after checking the destination. The private `~/.local/state/heimdall/discord-webhook` file must remain mode 0600 and must not enter Git, reports or screenshots. Correct a deleted/rejected destination through configuration; repeatedly flushing it will not repair its credentials. A timer exit status of zero alone does not prove delivery—also inspect provider status and pending work.

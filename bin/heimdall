@@ -25,13 +25,16 @@ Usage: ./bin/heimdall COMMAND
   config history              Show recorded configuration changes as JSON
   ingest FILE|-               Process journal-shaped samples (synthetic mode)
   cleanup                     Apply configured retention to local records
+  discord COMMAND             Configure optional delivery, enable/disable,
+                              inspect status or flush pending work
   demo                        Run a labelled synthetic demo in separate state
 
 Defaults: four failures from one IP within 300 seconds; 60-day retention.
 State: HEIMDALL_DATA_DIR, or ~/.local/state/heimdall (XDG_STATE_HOME supported).
 Requires Bash, jq and Python 3. Live monitoring also requires Ubuntu journalctl.
 Example: ./bin/heimdall config set '{"threshold":4,"window_seconds":300}'
-Review changes do not change SSH access. Blocking and providers are planned.
+Review changes do not change SSH access. Blocking and reputation remain planned.
+Discord starts disabled; configure its private destination through stdin.
 See docs/runbook.md for dashboard login and Ubuntu setup.
 HELP
     exit 0
@@ -86,6 +89,13 @@ if [ "${1:-}" = monitor ]; then
   monitor_command "$@"
   exit
 fi
+# Delivery serializes itself separately; never hold the state lock over HTTP.
+if [ "${1:-}" = discord ]; then
+  shift
+  . "$ROOT/lib/discord.sh"
+  discord_command "$@"
+  exit
+fi
 if [ "${HEIMDALL_TRANSACTION_LOCK_PID:-}" != "$$" ]; then
   exec python3 "$ROOT/lib/lock.py" "$DATA/.transaction.lock" HEIMDALL_TRANSACTION_LOCK_PID 5 "$ROOT/bin/heimdall" "$@"
 fi
@@ -96,16 +106,25 @@ validate
 cmd=${1:-}
 shift || :
 case "$cmd" in
+  _discord)
+    . "$ROOT/lib/discord_state.sh"
+    discord_state_command "$@"
+    ;;
   init)
     [ "$#" = 0 ] || err 'Usage: init'
     jq '.config' "$STATE"
     ;;
   status)
     [ "$#" = 0 ] || err 'Usage: status'
+    if [ "$(jq -r '.mode' "$STATE")" = fixture ]; then
+      manager_info='{"manager":"standalone","applicable":false}'
+    else
+      manager_info=$(python3 "$ROOT/lib/service.py" "$ROOT" "$DATA" inspect)
+    fi
     alive=false
     pid=$(jq -r '.monitor.pid // empty' "$STATE")
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && ps -p "$pid" -o command= | grep -F "$ROOT/bin/heimdall monitor run" >/dev/null; then alive=true; fi
-    jq --argjson alive "$alive" '{monitor:((.monitor // {state:"stopped",pid:null,source:"journalctl -u ssh",last_event_at:null,last_error:null,coverage:"unavailable"}) | if $alive then . else .coverage="unavailable" | .pid=null | if .state=="running" then .state="error" | .last_error="Monitor process exited; coverage unavailable" else . end end),counts:{events:(.events|length),alerts:(.alerts|length),needs_review:([.alerts[]|select(.review_status == "needs_review")]|length)},providers:{discord:"not_implemented",virustotal:"not_implemented"},mode:(.mode // "live"),config:.config}' "$STATE"
+    jq -L "$ROOT/lib" --argjson now "$(date +%s)" --argjson service "$manager_info" --argjson alive "$alive" 'include "notifications"; {monitor:((.monitor // {state:"stopped",pid:null,source:"journalctl -u ssh",last_event_at:null,last_error:null,coverage:"unavailable"}) | if $alive then . else .coverage="unavailable" | .pid=null | if .state=="running" then .state="error" | .last_error="Monitor process exited; coverage unavailable" else . end end | .manager=$service.manager | .service=$service | if $service.manager=="unavailable" then .state="error" | .coverage="unavailable" | .last_error=$service.error elif $service.manager=="systemd" and ($service.active_state!="active" or $service.main_pid!=.pid) then .coverage="unavailable" | .pid=null | .state=(if $service.active_state=="inactive" then "stopped" else "error" end) | .last_error=(if $service.active_state=="inactive" then null else "Monitor service is not active with the recorded process; inspect systemctl status heimdall-monitor.service" end) else . end),counts:{events:(.events|length),alerts:(.alerts|length),needs_review:([.alerts[]|select(.review_status == "needs_review")]|length)},providers:{discord:(discord_summary($now).provider_state),virustotal:"not_implemented"},discord:discord_summary($now),mode:(.mode // "live"),config:.config}' "$STATE"
     ;;
   alerts)
     [ "$#" = 0 ] || err 'Usage: alerts'
@@ -179,7 +198,7 @@ case "$cmd" in
       printf '%s\n' "$normalized" >>"$parsed"
     done <"$batch"
     python3 "$ROOT/lib/normalize.py" <"$parsed" >"$batch"
-    result=$(jq --slurpfile incoming "$batch" --argjson malformed "$malformed" --argjson now "$(date +%s)" -f "$ROOT/lib/rules.jq" "$STATE") || {
+    result=$(jq -L "$ROOT/lib" --slurpfile incoming "$batch" --argjson malformed "$malformed" --argjson now "$(date +%s)" -f "$ROOT/lib/rules.jq" "$STATE") || {
       rm -f "$batch" "$parsed"
       err 'Event processing failed'
     }
@@ -196,10 +215,10 @@ case "$cmd" in
   cleanup)
     [ "$#" = 0 ] || err 'Usage: cleanup'
     before=$(jq '.events|length' "$STATE")
-    result=$(jq --argjson now "$(date +%s)" '($now - .config.retention_days*86400) as $cutoff | .alerts |= map(select(.last_seen >= $cutoff)) | [.alerts[].event_ids[]] as $keep | .events |= map(select(((.timestamp // .received_at // $now) >= $cutoff) or (.id as $id | $keep | index($id) != null))) | .sources = ((.sources // {}) | with_entries(select(.value.last >= $cutoff)))' "$STATE")
+    result=$(jq -L "$ROOT/lib" --argjson now "$(date +%s)" 'include "notifications"; retention_cleanup($now)' "$STATE")
     printf '%s\n' "$result" | save
     after=$(jq '.events|length' "$STATE")
     jq -n --argjson removed "$((before - after))" '{events_removed:$removed}'
     ;;
-  *) err 'Usage: heimdall init|status|alerts|events|inspect|review|reopen|config|ingest|monitor|report|cleanup' ;;
+  *) err 'Usage: heimdall init|status|alerts|events|inspect|review|reopen|config|ingest|monitor|report|cleanup|discord' ;;
 esac

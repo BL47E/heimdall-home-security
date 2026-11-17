@@ -1,5 +1,51 @@
 # Heimdall development diary
 
+## 2026-11-17 — Documentation reconciliation and pull-request preparation
+
+Checked GitHub: no existing pull requests; `main` still points to the earlier dashboard handoff while the pushed `codex/service-cleanup-deployment` branch contains the service/retention/Discord work. A recent-push banner is not a pull request or merge. Prepared the branch for a draft PR; no merge or new VM deployment accompanies this documentation work.
+
+Audited current documentation against recorded implementation and evidence. Corrected stale Discord/service-control claims, old VM prerequisites, fixture provenance, standalone-versus-systemd instructions and dated checklist counts. Added the [implementation matrix](docs/status.md) and [verification index](docs/verification/README.md), linked them from the overview, plan, backlog, runtime contract, academic evidence map and HTML index. Retained faculty originals, ADR decisions, archived artifacts and dated test records without changing their historical results. Owner decisions, faculty questions and unfinished academic work remain open.
+
+Reran the current Python suite on the Mac: 66 tests in 53.490 seconds, 65 passed and one Ubuntu-only systemd unit-parser test skipped. This does not replace the previously recorded all-66 Ubuntu run or claim a new live VM observation. Documentation validation and PR metadata are checked separately.
+
+## 2026-11-17 — Real Discord alerts and scheduled delivery
+
+The owner approved creating Heimdall's webhook in the new Blaze's TEST server's #general channel, private storage on blue and transmission of controlled SSH summary metadata. Computer Use created/named the webhook and later observed three delivered messages. The URL stayed out of code, evidence and command output. Configuration was passed through hidden input to the shell CLI; the credential remained mode 0600 on blue.
+
+Red generated seven deliberate failed-password attempts with strict host checking. Three produced no alert; the fourth created a new alert and Discord accepted its notice. Review/fifth-failure reopening queued another notice. A disposable sender-only socket fault retained that notice, recorded ambiguity/backoff and left the monitor healthy. A fresh CLI process respected the saved retry time; a sixth failure after another review queued a second reopening notice. Recovery delivered both together. This was controlled transport fault injection, not a real Discord outage or network change.
+
+Installed and enabled the reviewed unprivileged Discord service/timer after Ubuntu unit verification. The seventh failure reopened the reviewed alert and the timer delivered it without a manual flush at 16:10:09 IST. Final state: four delivered notices in three messages, zero pending; monitor still healthy under PID 21431, with 136 events and three alerts. Existing earlier evidence and alerts were preserved. [Verification and limits](docs/verification/2026-11-17-discord.md) distinguish real delivery from injected failure and source/mock coverage. No runtime code change, firewall change, new account permission, VirusTotal or blocking accompanied this connection.
+
+## 2026-11-17 — Saved source checkpoint and deployed service controls/cleanup
+
+Verified the existing local service, retention and optional Discord implementation. Fixed the Discord flush concurrency failure by keeping each run bounded to its initial queue snapshot; the existing regression now passes. Updated the shell smoke test's obsolete provider expectation. Saved the source and earlier VM evidence in commit `ecaec12` on `codex/service-cleanup-deployment`. Mac tests: 65 passed, one Ubuntu-only skip; blue's checksum-verified package: all 66 passed, plus shell/configuration and 19 monitor scenarios. Ubuntu accepted the resolved units.
+
+Deployed a fresh `/home/bl47eheim/heimdall/releases/0.1.0-ecaec12/heimdall-0.1.0` release with the same owner and private state. Saved state/unit/launcher backups on blue, kept the old release, and switched the fixed monitor unit and owner launcher together. A first overly strict duplicate-reader verification assertion triggered a successful automatic code rollback; corrected the harness and repeated deployment. All 93 baseline events and both alerts/review histories were preserved.
+
+Verified real service identity and healthy coverage, denied CLI/API start/stop without process fallback, administrator console stop/start, truthful stopped status and refusal of a manual reader outside the service. Enabled daily cleanup and observed its timer trigger plus successful service execution; next observed run was November 18 at 00:05:11 IST. The dashboard was started manually on the existing Host-Only address. Browser start/stop still requires administrator console action under existing Ubuntu policy; no broader authorization was added.
+
+Used Computer Use for the blue/red consoles. The owner supplied console unlocks and administrator authentication. A temporary Python HTTP transfer on the existing Host-Only network avoided new packages, access credentials and network changes. Red sent one deliberate invalid-user password attempt with verified host checking; blue recorded the matching failure exactly once. Final state: 99 stored events, two unchanged alerts and healthy systemd coverage, with cleanup enabled and successful. See [full evidence](docs/verification/2026-11-17-deployment.md) for results and limits. This work does not establish either student's academic contribution, resolve faculty questions, enable real providers or implement blocking. No push or external message was sent.
+
+## 2026-11-07 — Monitor boot startup and bounded automatic recovery
+
+Following the owner's administrator authorization, installed the reviewed resolved service on blue as a root-owned mode-644 unit, running the monitor as `bl47eheim`. Stopped the manual process before starting the service. Used existing journal permissions without adding a group or running Heimdall as root.
+
+Verified automatic replacement after SIGKILL: PID 5797 became 5909, restart count 1, with the same 73 events and two alerts. Repeated crashes reached the configured three-starts-per-minute limit; the journal reported start requests repeated too quickly, and Heimdall showed error/unavailable coverage. Reset the failure counter and restored the service.
+
+Rebooted blue and completed a fresh console login. A changed boot ID and current-boot journal established automatic startup at 21:48:18 IST, PID 1101, before any manual monitor launch. Heimdall had available coverage, 77 events and two retained alerts. A fresh red-source failure was ingested after reboot, while the prior five-failure alert and review history remained intact. Restarted the separate dashboard manually and verified HTTP 200 from the Mac. Both VMs remain running; the monitor is enabled at boot, dashboard startup remains manual.
+
+[Service verification](docs/verification/2026-11-07-systemd.md) records evidence and limitations. Current CLI/browser controls act directly on the monitor process rather than managing the service; use systemctl on blue until those controls are integrated. Updated the checklist, README, milestone status and runbook. No runtime source change, firewall/network change, student-contribution claim, Git commit or push accompanies this work. Credentials were not embedded in commands or saved evidence.
+
+## 2026-11-07 — Real red-to-blue alerting and console recovery
+
+The owner supplied both running VMs and authorized a live verification work package. Confirmed blue at `10.37.129.3` and red at `10.37.129.4`. Blue initially had a stopped monitor, unavailable coverage, 44 events and one preserved alert. Started the monitor and dashboard manually using the deployed 0.1.0 release.
+
+Real controlled failures from red produced no alert at three and a new Medium alert at four. Reviewing that alert then sending a fifth failure reopened it with both review transitions retained. The previous Mac-source alert remained separate. Verified the monitor process identity, forced its crash and observed honest error/unavailable status. Restarted it from blue's console: 73 events, two alerts and the red count of five were preserved. Authenticated dashboard HTTP status and alert data agreed with the CLI. The monitor and dashboard were left running manually.
+
+Prepared the service file with blue's actual paths and account; Ubuntu's `systemd-analyze verify` returned 0. Omitted an extra journal group because the account already has journal access. The unit remains uninstalled, and noninteractive sudo was unavailable. Administrator authentication, installation, automatic crash restart and reboot verification remain next. Manual console recovery does not establish recovery from a source block or fresh console login. No firewall, network, account-access or boot-service changes were made.
+
+[Sanitized verification record](docs/verification/2026-11-07-red-blue-recovery.md) documents commands, results, limitations and private evidence paths on blue. No runtime source change, commit or push accompanies this work. The assistant executed the checks; student contributions and faculty questions remain unresolved.
+
 ## 2026-11-05 — Sidebar and lab handoff
 
 - Commit `4d2b389` removes the persistent sidebar underline and the animated hover line. The active link uses brighter, medium-weight text, hover brightens the label, and keyboard focus shows an outline. Blue served the updated stylesheet, and browser checks verified these states at 390, 768 and 1360 pixels.

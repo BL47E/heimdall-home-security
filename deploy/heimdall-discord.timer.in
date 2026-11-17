@@ -1,0 +1,13 @@
+# Manual template only. Review the destination and resolved sender service first.
+# The sender uses persisted eligibility times and never sleeps through backoff.
+[Unit]
+Description=Check Heimdall's optional Discord delivery queue
+
+[Timer]
+OnBootSec=20s
+OnUnitInactiveSec=15s
+AccuracySec=1s
+Unit=heimdall-discord.service
+
+[Install]
+WantedBy=timers.target

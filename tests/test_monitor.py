@@ -12,7 +12,17 @@ class MonitorTests(unittest.TestCase):
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
-        self.env = dict(os.environ, HEIMDALL_DATA_DIR=self.directory.name)
+        # Tests must never discover/control a real installed host service.
+        manager_bin = Path(self.directory.name) / "isolated-manager"
+        manager_bin.mkdir()
+        manager = manager_bin / "systemctl"
+        manager.write_text("#!/bin/sh\nprintf '%s\\n' 'LoadState=not-found'\n")
+        manager.chmod(0o700)
+        self.env = dict(
+            os.environ, HEIMDALL_DATA_DIR=self.directory.name,
+            HEIMDALL_MONITOR_MANAGER="auto",
+            PATH=str(manager_bin) + ":" + os.environ["PATH"],
+        )
 
     def cli(self, *args, data=None, ok=True):
         p = subprocess.run(
