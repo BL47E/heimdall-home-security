@@ -4,6 +4,12 @@ Source: the owner-provided [“Mini-Project Evaluation Rubrics (30 Marks).docx�
 
 The rubric confirms evaluation criteria, not a feature specification, report template, deadline or permitted technology list. The owner subsequently supplied an idea template, documented below; its applicability to the final report remains unconfirmed. Other requirements remain subject to faculty instructions. Evidence suggestions here are our planning recommendations, not additional faculty requirements. No marks are guaranteed.
 
+## Current implementation evidence — November 17
+
+Use the [implementation status matrix](status.md) to connect each claim to code, tests and live evidence. Real SSH threshold/reopening, persistent history, authenticated dashboard, boot/crash recovery, service-aware controls, daily cleanup and owner-approved scheduled Discord delivery now have linked verification. Discord's controlled outage scenario injects a sender-only socket failure; it must not be described as a genuine Discord outage. Additional live rule scenarios and a sender-timer reboot observation remain open.
+
+The report, proposal, Gantt chart, presentation rehearsal and both students' individual contribution records remain unfinished. Existing agent-generated code/evidence does not establish equal student contribution or faculty acceptance. Use dated records without converting planned VirusTotal or blocking into implementation claims. The supplied faculty originals and their requirements below remain unchanged.
+
 ## Criteria and evidence plan
 
 Each sub-criterion carries 3 marks, for 30 total. Each has performance levels from 0 to 3. The summary calls the one-mark level Average, while the descriptor table calls it Acceptable; use the actual descriptors when preparing evidence.

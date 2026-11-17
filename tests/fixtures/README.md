@@ -1,4 +1,4 @@
-# Synthetic SSH records
+# SSH record fixtures and provenance
 
 `password-burst.jsonl` contains hand-authored journal-shaped examples. Cursors beginning `synthetic:` are demonstration identities. The fixture creates four failures across two usernames and a later success; replay performs no SSH connection or network action.
 

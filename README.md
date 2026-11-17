@@ -6,7 +6,7 @@
 
 A college project for Linux & Shell Programming (CSET-213).
 
-**[Runbook](docs/runbook.md)** · **[Milestone plan](docs/college-milestone-plan.md)** · **[Build checklist](checklist.md)** · **[Evaluation requirements](docs/evaluation-alignment.md)** · **[Dashboard decision](docs/adr/0003-shell-monitor-with-local-dashboard.md)**
+**[Status](docs/status.md)** · **[Runbook](docs/runbook.md)** · **[Milestone plan](docs/college-milestone-plan.md)** · **[Build checklist](checklist.md)** · **[Evaluation requirements](docs/evaluation-alignment.md)** · **[Dashboard decision](docs/adr/0003-shell-monitor-with-local-dashboard.md)**
 
 </div>
 
@@ -26,14 +26,14 @@ The dashboard separates `/overview`, `/investigations`, `/activity` and `/settin
 
 Future panel changes follow the [control panel design guide](docs/control-panel-design.md), including the owner's preference for dark dotted graphics, terminal art and animation.
 
-## What the first version is planned to do
+## Milestone behavior and remaining targets
 
 - Watch SSH login records in the background, start at boot and attempt bounded recovery after a crash.
 - Raise an explainable alert after **four failures from the same IP in a rolling five-minute window**, across usernames.
 - Group a continuous burst until five minutes without another failure. Show the source, timeline, matched rule and recommendations.
 - Summarize a successful login with matching preceding failures for the same user and IP when the data supports it.
 - Offer direct shell commands and a local browser dashboard for status, alerts, investigation, review, validated configuration and report export. A terminal menu remains a later convenience.
-- Preserve local alert history for **60 days** by default, including review history across restarts. Daily cleanup preserves pending delivery and active block records.
+- Preserve local alert history for **60 days** by default, including review history across restarts. Daily cleanup preserves pending delivery and required supporting evidence. Active-block retention is a future requirement because blocking is not implemented.
 - Send optional Discord webhook messages. Queue failed deliveries and send a grouped list when Discord becomes reachable again.
 - Optionally enrich eligible public IPs with VirusTotal context. Missing results mean unknown, and zero flags mean no flags found. Local processing works offline.
 - Provide a guided demonstration that clearly labels prepared data and simulated actions.
@@ -42,19 +42,19 @@ Future panel changes follow the [control panel design guide](docs/control-panel-
 
 ## Test environment
 
-One MacBook M4 Air with 16 GB RAM will host two Ubuntu ARM64 virtual machines:
+One MacBook M4 Air with 16 GB RAM hosts two Ubuntu ARM64 virtual machines in Parallels Desktop:
 
 1. **Heimdall VM:** SSH service, shell monitor, terminal management and local records.
 2. **Test VM:** controlled SSH attempts over a private virtual network.
 
-Separate outbound connectivity supports Discord and optional VirusTotal. Private VM addresses will not be sent to VirusTotal; the guided reputation demonstration uses labelled simulated results. Choose the VM application, Ubuntu release and actual SSH log input during setup.
+Separate outbound connectivity supports Discord and optional VirusTotal. Private VM addresses will not be sent to VirusTotal; the guided reputation demonstration uses labelled simulated results. Blue's observed SSH banner reports Ubuntu 26.04.1 LTS; the live input is `journalctl -u ssh` JSON. See the dated lab evidence and recheck the environment when resuming.
 
-## Planned stack
+## College milestone stack
 
 | Area | College milestone |
 |---|---|
 | Main language | Linux shell scripts |
-| Supporting tools | Common Linux commands, curl and jq |
+| Supporting tools | Common Linux commands and jq; Python standard-library HTTPS transport |
 | Management | Shell command interface and local browser dashboard |
 | HTTP bridge | Python 3 standard library; no hosted dependencies |
 | Normalization helper | Python standard library for canonical IPs and content fingerprints |
@@ -66,9 +66,9 @@ Separate outbound connectivity supports Discord and optional VirusTotal. Private
 
 Python is now a prerequisite for the browser bridge, following the owner's scope change. SQLite, Docker Compose and a Python rules engine remain outside this shell-first implementation.
 
-## Start building
+## Continue the milestone
 
-Follow [checklist.md](checklist.md) and the [GitHub build backlog](docs/build-backlog.md). Build in this order:
+The core monitor/dashboard, services, retention and Discord are delivered. Use the [current status](docs/status.md), [checklist](checklist.md) and [GitHub backlog](docs/build-backlog.md) for remaining live evidence, open decisions and academic work. The original build sequence was:
 
 1. VM setup, representative SSH logs and sample fixtures.
 2. Live parsing, rolling-window detection and explanations.

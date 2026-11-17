@@ -1,5 +1,13 @@
 # Heimdall development diary
 
+## 2026-11-17 — Documentation reconciliation and pull-request preparation
+
+Checked GitHub: no existing pull requests; `main` still points to the earlier dashboard handoff while the pushed `codex/service-cleanup-deployment` branch contains the service/retention/Discord work. A recent-push banner is not a pull request or merge. Prepared the branch for a draft PR; no merge or new VM deployment accompanies this documentation work.
+
+Audited current documentation against recorded implementation and evidence. Corrected stale Discord/service-control claims, old VM prerequisites, fixture provenance, standalone-versus-systemd instructions and dated checklist counts. Added the [implementation matrix](docs/status.md) and [verification index](docs/verification/README.md), linked them from the overview, plan, backlog, runtime contract, academic evidence map and HTML index. Retained faculty originals, ADR decisions, archived artifacts and dated test records without changing their historical results. Owner decisions, faculty questions and unfinished academic work remain open.
+
+Reran the current Python suite on the Mac: 66 tests in 53.490 seconds, 65 passed and one Ubuntu-only systemd unit-parser test skipped. This does not replace the previously recorded all-66 Ubuntu run or claim a new live VM observation. Documentation validation and PR metadata are checked separately.
+
 ## 2026-11-17 — Real Discord alerts and scheduled delivery
 
 The owner approved creating Heimdall's webhook in the new Blaze's TEST server's #general channel, private storage on blue and transmission of controlled SSH summary metadata. Computer Use created/named the webhook and later observed three delivered messages. The URL stayed out of code, evidence and command output. Configuration was passed through hidden input to the shell CLI; the credential remained mode 0600 on blue.

@@ -1,6 +1,6 @@
 # Shell monitor and browser dashboard contract
 
-Status: implementation contract selected for the owner's 2026-11-04 request to build the monitor and a local browser dashboard. This records implementation choices, not verified live-VM results. The dashboard extends ADR 0002; unresolved faculty requirements remain open. Integrations and SSH blocking remain planned.
+Status: implementation contract selected for the owner's 2026-11-04 request to build the monitor and a local browser dashboard. Reconciled November 17: this describes the implemented shell/HTTP/service/Discord interfaces. The [status matrix](status.md) links separate test and live-VM evidence. The dashboard extends ADR 0002; faculty questions remain open. VirusTotal and SSH blocking remain planned.
 
 ## Components and ownership
 
@@ -8,14 +8,14 @@ Status: implementation contract selected for the owner's 2026-11-04 request to b
 - `lib/`: shell/jq parsing, rules and storage, plus a small Python standard-library normalization helper for IP validation/canonicalization and content fingerprints. The shell CLI owns every runtime state mutation, including browser configuration and alert reviews.
 - `web/server.py`: Python 3 standard-library HTTP bridge. Executes the CLI using argument lists with `shell=False`, timeout and a fixed absolute executable path. Python serves HTTP; SSH interpretation and rule decisions remain in shell/jq.
 - `web/static/`: offline HTML, CSS and JavaScript, without CDN dependencies or a build tool. Mobile layout and keyboard access are required.
-- `tests/fixtures/`: explicitly synthetic journal JSONL scenarios and provenance notes; never describe them as exported real logs.
+- `tests/fixtures/`: synthetic journal JSONL scenarios plus a separately labelled sanitized real Ubuntu export. All offline ingestion has fixture provenance; it never establishes live coverage. See the fixture README.
 - `HEIMDALL_DATA_DIR`: runtime directory, default `${XDG_STATE_HOME:-$HOME/.local/state}/heimdall`. Private directories (0700) and files (0600), excluded from Git. Both components receive the same directory through their environment.
 
 State changes use an operating-system advisory lock through `lib/lock.py` (Python standard-library `fcntl`), a temporary file in the same directory and atomic rename. Transactions wait at most five seconds for their lock. A separate monitor singleton lock rejects duplicate readers; the OS releases these locks after a crash. The journal child closes the singleton descriptor so an orphan cannot retain it. Lock files remain in the private state directory and must not be deleted while software is running. Interrupted writes preserve the prior valid state. Do not overwrite corrupt state.
 
 ## CLI interface
 
-All successful commands below return one JSON value on stdout, with diagnostics on stderr. Errors return nonzero. Unknown IDs fail without changing state.
+Machine-readable commands return one JSON value on stdout, with diagnostics on stderr. Help, version, demo, report and foreground monitoring have the documented human-readable/operational exceptions below. Errors return nonzero. Unknown IDs fail without changing state.
 
 | Command | Result and behavior |
 |---|---|
@@ -38,6 +38,11 @@ All successful commands below return one JSON value on stdout, with diagnostics 
 | `heimdall monitor stop` | Stop the matching installed system unit when present; otherwise stop only a proven standalone Heimdall monitor process. Return status. No arbitrary PID kills. |
 | `heimdall report ID` | Readable text investigation report, documented exception to JSON output. |
 | `heimdall cleanup` | Apply retention safely and return removal counts. |
+| `heimdall discord configure` | Read an approved HTTPS webhook from stdin, save privately and leave delivery disabled. Reconfiguration first disables the previous destination, including when replacement validation fails. |
+| `heimdall discord configure-test` | Configure an explicit loopback-only test endpoint; never silently widen production URL acceptance. |
+| `heimdall discord enable` / `disable` | Enable subsequent eligible transitions or stop delivery/enqueue; disabling preserves queued work and the credential. No historical-alert backfill. |
+| `heimdall discord status` | Return safe configuration, pending/delivered counts, retry timing, latest outcome and provider state; never the webhook URL. |
+| `heimdall discord flush` | Attempt a bounded initial queue snapshot, group/split messages and persist accepted or failed outcomes. No state transaction lock is held over HTTP. |
 
 No web endpoint accepts arbitrary shell commands, filesystem paths, journal units or code. CLI ingestion is local-only. If a command cannot be implemented in the first pass, it must fail explicitly and the dashboard must label it unavailable.
 
@@ -47,7 +52,7 @@ Source implementation selects `HEIMDALL_MONITOR_MANAGER=auto` by default; `stand
 
 Service operations use bounded, noninteractive `systemctl --system --no-ask-password` calls. They never invoke sudo, save passwords, install authorization policy or request an arbitrary unit. Existing system authorization determines whether control succeeds. If authorization is unavailable, exit 77 with a service-control diagnostic and a manual administrator command; the browser returns an actionable 503 response. No direct process control follows a service failure.
 
-Status adds `monitor.manager` and `monitor.service` metadata. A system unit reported active is insufficient for available coverage: the saved PID must still be alive, match the CLI process and equal the unit's MainPID, and live journal coverage must have been established. Inactive, failed, mismatched or unreadable service state cannot report healthy monitoring. A known unit-owned PID's Linux control-group membership prevents standalone fallback if service inspection disappears. This local source integration requires separate deployment verification on blue; the earlier service evidence tested the installed unit with the previous process-only CLI.
+Status adds `monitor.manager` and `monitor.service` metadata. A system unit reported active is insufficient for available coverage: the saved PID must still be alive, match the CLI process and equal the unit's MainPID, and live journal coverage must have been established. Inactive, failed, mismatched or unreadable service state cannot report healthy monitoring. A known unit-owned PID's Linux control-group membership prevents standalone fallback if service inspection disappears. This integration was [deployed and verified on blue on November 17](verification/2026-11-17-deployment.md), including real denied control without fallback and administrator stop/start. The earlier November 7 record remains evidence for boot/crash behavior of the previous release. A duplicate foreground invocation may fail earlier with exit 1 when the singleton lock is held; exit 77 identifies the later service-control guard.
 
 ## Configuration
 
@@ -71,7 +76,7 @@ Event fields exposed to the browser:
 
 Failure rule: qualifying events for one IP at times `t-window_seconds <= event.time <= t` count across usernames. Four qualify by default. Keep one burst until a gap of at least window_seconds since its last failure, then create a later alert only when the new burst reaches threshold. At the exact quiet-time boundary the previous burst is closed; the rolling count must not drag the preceding burst's boundary event into the new burst. Explain this distinction in tests/docs. An alert contains its own threshold/window settings, source, count, event IDs and explanation. New failures in an active reviewed alert reopen it and append a history record. Successful logins may summarize prior failures for the same IP/user within the window; missing matching evidence yields unknown. Success alone never blocks or proves compromise.
 
-Order and replay: persist cursor-based deduplication with state so restart cannot recount events. The initial live start begins at the current journal position (`--since now` or equivalent) rather than silently alerting on historical attacks; later starts resume after the saved cursor. A lost cursor/read failure must be visible, not silently reported as uninterrupted coverage. Late older records remain evidence but do not move a source's active clock backwards or create new current alerts; document their exclusion from real-time rules. Fixture replay uses the same detector but labels simulated input and coverage. Retention defaults to 60 days and preserves evidence needed by retained alerts; provider pending/block exemptions remain design obligations before those features exist.
+Order and replay: persist cursor-based deduplication with state so restart cannot recount events. The initial live start begins at the current journal position (`--since now` or equivalent) rather than silently alerting on historical attacks; later starts resume after the saved cursor. A lost cursor/read failure must be visible, not silently reported as uninterrupted coverage. Late older records remain evidence but do not move a source's active clock backwards or create new current alerts; document their exclusion from real-time rules. Fixture replay uses the same detector but labels simulated input and coverage. Retention defaults to 60 days and preserves evidence needed by retained alerts; pending Discord notices and their alert/evidence references are retained beyond the cutoff. Delivered notices expire by their delivery/creation time. Active-block retention remains a design obligation because blocking is not implemented.
 
 ## Alert and status responses
 
@@ -85,7 +90,9 @@ Order and replay: persist cursor-based deduplication with state so restart canno
 {"monitor":{"state":"stopped","pid":null,"source":"journalctl -u ssh","last_event_at":null,"last_error":null,"coverage":"unavailable"},"counts":{"events":0,"alerts":0,"needs_review":0},"providers":{"discord":"disabled","virustotal":"not_implemented"},"mode":"live","config":{"threshold":4,"window_seconds":300,"retention_days":60}}
 ```
 
-State values: `running`, `stopped`, `error`; coverage `available` only after a live journal read is proven and consumer is alive, otherwise `unavailable`. Mode `fixture` means offline samples, never live healthy monitoring. Preserve last errors and report permission/read/child-process failure. Quiet logs alone do not imply failure. Do not claim integrations work.
+The status JSON above is abbreviated. Full live responses also include `monitor.manager`, `monitor.service` and the safe `discord` summary. Discord provider states are `disabled`, `fixture_destination_mismatch`, `needs_configuration`, `rate_limited`, `delivery_error`, `pending`, `delivered` or `configured`. An exited sender with code zero may have had no eligible work; inspect pending counts and accepted outcomes.
+
+State values: `running`, `stopped`, `error`; coverage `available` only after a live journal read is proven and consumer is alive, otherwise `unavailable`. Mode `fixture` means offline samples, never live healthy monitoring. Preserve last errors and report permission/read/child-process failure. Quiet logs alone do not imply failure. Provider status must come from implemented configuration/queue/delivery state; unimplemented providers stay labelled.
 
 ## Browser API
 
@@ -113,14 +120,22 @@ Except login/session discovery/static assets, require authenticated session. Eve
 
 Page navigation uses distinct URLs; signing in preserves the requested page. Direct loading the public shell does not grant access to evidence or other protected API responses.
 
-The dashboard presents honest status, alert list and evidence, recent events, review/reopen, configuration form, monitor start/stop and readable report downloads. Use a simple polling refresh with visible stale/error state. Describe disabled integrations as planned. Do not offer firewall manipulation, arbitrary script editing or faux working controls.
+The dashboard presents honest status, alert list and evidence, recent events, review/reopen, configuration form, monitor start/stop and readable report downloads. Use a simple polling refresh with visible stale/error state. Distinguish implemented-but-disabled providers from planned providers. Do not offer firewall manipulation, arbitrary script editing or faux working controls.
 
 Page navigation uses real links: `/` and `/overview` select Overview, `/investigations` selects alert review, `/activity` selects recent events and `/settings` selects configuration. Exactly one page is visible after authentication. Direct loads and browser Back/Forward retain the intended route; unsaved configuration edits trigger the browser's leave-page warning. Authentication loss clears private page content, and restored browser-history pages revalidate their session before showing records. Refresh responses from an earlier session cannot repopulate private content after sign-out.
 
 JetBrains Mono Regular and Medium load from the exact public asset URLs `/fonts/JetBrainsMono-Regular.woff2` and `/fonts/JetBrainsMono-Medium.woff2`, served as `font/woff2`; no external font service is required. Their SIL Open Font License is retained in `web/static/fonts/OFL.txt`. Unknown routes and assets, encoded paths, query strings, fragments and non-origin-form request targets are rejected rather than falling through to a general filesystem server.
 
-## Local delivery extension — November 17 source checkpoint
+## Discord delivery interface
 
-`discord configure` reads an approved HTTPS Discord webhook from stdin and saves it privately; `configure-test` accepts only explicit loopback test destinations. `enable`, `disable`, `status` and `flush` manage optional delivery. It starts disabled and does not enqueue old alerts retroactively. Created alerts and new failures reopening reviewed alerts enqueue atomically. One flush handles only its initial bounded snapshot; later findings remain pending. Pending notices and their alert evidence survive cleanup. Fake-endpoint tests establish retries, rate limits, grouped messages and ambiguous outcomes; actual Discord delivery remains unverified. See [delivery design](discord-delivery-design.md).
+`discord configure` reads an approved HTTPS Discord webhook from stdin and saves it privately; `configure-test` accepts only explicit loopback test destinations. `enable`, `disable`, `status` and `flush` manage optional delivery. It starts disabled and does not enqueue old alerts retroactively. Created alerts and new failures reopening reviewed alerts enqueue atomically. One flush handles only its initial bounded snapshot; later findings remain pending. Pending notices and their alert evidence survive cleanup. Fake-endpoint tests establish retries, rate limits, grouped messages and ambiguous outcomes; separate [real Discord and scheduler verification](verification/2026-11-17-discord.md) establishes the approved blue installation. See [delivery design](discord-delivery-design.md).
 
 Live monitor status includes its selected manager and fixed service metadata. CLI start/stop requests use noninteractive systemctl only after owner/release/state/command identity checks; unavailable authorization returns exit 77 and browser HTTP 503 with console instructions. No privilege policy or sudo credential is added. Fixtures remain independent of installed services.
+
+### Delivery scheduling and evidence boundaries
+
+The installed optional `heimdall-discord.service` runs the fixed CLI flush as the existing owner. Its timer checks twenty seconds after boot and fifteen seconds after each completed invocation; durable per-provider/per-notice deadlines can delay requests further. The live scheduler passed on blue, but a fresh reboot startup of this timer was not observed. The separate cleanup timer runs daily and preserves pending delivery evidence.
+
+Notifications enqueue atomically for new eligible alerts and new failures reopening Reviewed alerts. Continuing unreviewed failures, duplicate replay and manual reopen do not each enqueue a notice. A flush takes at most 100 eligible notices in its starting snapshot and attempts at most ten message chunks; concurrent arrivals remain pending. Reopening notices refer to the current alert summary at send time. Accepted remote messages acknowledge only their transmitted IDs. Failed/uncertain attempts retain pending work and ambiguity; exactly-once delivery is not guaranteed.
+
+Provider credentials and enabling controls are CLI-only. The browser status endpoint returns safe provider state through the shared CLI, but no endpoint configures a webhook. Existing text reports do not contain provider-specific delivery sections. Live outage recovery evidence used injected sender-only socket failure; real provider rate limits, timeouts and ambiguous-response cases are covered separately with fake endpoints.

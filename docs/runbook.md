@@ -1,5 +1,7 @@
 # Running Heimdall
 
+Current operating checkpoint: [November 17 status](status.md), [deployment](verification/2026-11-17-deployment.md) and [Discord](verification/2026-11-17-discord.md). Monitor, cleanup and sender are enabled on blue; the dashboard starts manually. Dated records are not a fresh health probe.
+
 This runbook covers the shell monitor and owner-requested local browser dashboard described in [ADR 0003](adr/0003-shell-monitor-with-local-dashboard.md). The first CLI is implemented and [tested on blue](verification/2026-11-04-cli-blue.md), including real fourth-failure alerts and restart persistence. The dashboard was verified on blue over loopback and from the Mac over Host-Only. [Deployment evidence](../diary.md#2026-11-05--dashboard-deployed-and-verified-on-blue) Commands and schemas follow [the runtime contract](runtime-contract.md); boot startup and bounded systemd recovery were verified on blue on 2026-11-07 ([evidence](verification/2026-11-07-systemd.md)); faculty acceptance of the dashboard remains open.
 
 ## What runs where
@@ -31,7 +33,7 @@ The current application version is `0.1.0`. From its release directory, `./bin/h
 
 For the verified installation on blue, use `~/heimdall/heimdall help` or `~/heimdall/heimdall status` from any directory. This launcher now points to `/home/bl47eheim/heimdall/releases/0.1.0-ecaec12/heimdall-0.1.0`, deployed and verified on November 17 ([evidence](verification/2026-11-17-deployment.md)). The latest previous launcher is saved privately under `~/heimdall/evidence/2026-11-17/attempt2/heimdall-launcher.before`; the older `heimdall.before-dashboard` checkpoint is historical. The monitor is now managed by the enabled `heimdall-monitor.service` on blue. Check `systemctl status heimdall-monitor --no-pager` and `~/heimdall/heimdall status` after boot. Use `sudo systemctl start|stop|restart heimdall-monitor` to manage this installed service; the vertical bars mean choose one action. Browser/CLI controls now validate and address the fixed systemd unit. Existing Ubuntu authorization denies unprivileged start/stop, returning an administrator instruction instead of starting a separate process. Use the console systemctl commands for actual lifecycle changes on blue.
 
-In blue's terminal, enter the repository directory before running these commands:
+For a new standalone setup with no installed monitor service, enter its release directory and run these commands. On blue's existing service-managed installation, use the administrator systemctl commands above instead of standalone startup:
 
 ```sh
 ./bin/heimdall init
@@ -40,7 +42,7 @@ In blue's terminal, enter the repository directory before running these commands
 ./bin/heimdall status
 ```
 
-`init` prepares private state with defaults. `start` starts a background reader of `journalctl -u ssh`; `status` reports whether that reader is alive and whether journal coverage is available. A running browser is not evidence that monitoring is healthy. Initial monitoring starts at the current journal position; subsequent starts use the saved cursor, a journal record reference that prevents replay from being counted twice. Cursor loss, unreadable logs or a terminated reader must remain visible in status.
+`init` prepares private state with defaults. With no installed service, `start` starts a background reader of `journalctl -u ssh`; `status` reports whether that reader is alive and whether journal coverage is available. A running browser is not evidence that monitoring is healthy. Initial monitoring starts at the current journal position; subsequent starts use the saved cursor, a journal record reference that prevents replay from being counted twice. Cursor loss, unreadable logs or a terminated reader must remain visible in status.
 
 Inspect findings through the same commands used by the dashboard:
 
@@ -62,7 +64,7 @@ To inspect, review or export an alert, replace `ALERT_ID` with an ID returned by
 
 An alert's review status records the owner's investigation progress. New failures reopen a reviewed alert while its burst remains active. Review commands do not change SSH access. Configuration accepts only bounded integers: threshold 2–100, window 30–3600 seconds and retention 1–365 days. Changes apply to later events; existing findings retain their rule settings.
 
-Stop the background reader with `./bin/heimdall monitor stop`. Foreground operation for a service manager is `./bin/heimdall monitor run`.
+On a standalone installation, stop the background reader with `./bin/heimdall monitor stop`. With a matching installed unit, start/stop addresses systemd and may require administrator console action. Foreground `./bin/heimdall monitor run` is owned by that service and cannot be used to bypass it.
 
 Transaction and monitor locks use an operating-system advisory lock through a small Python standard-library helper. A process crash releases its lock automatically; the next monitor owns and cleans only its known scratch files. Keep `.transaction.lock` and `.monitor.lock` in place while any Heimdall process runs. Never remove locks to bypass an active writer. Mock crash/restart tests establish local behavior. Real blue service crash recovery, retry limiting and boot startup are recorded in [service evidence](verification/2026-11-07-systemd.md).
 
@@ -144,7 +146,7 @@ To undo the service setup, stop and disable that unit, remove only its reviewed 
 
 ## Verification and remaining evidence
 
-Record exact checks and outcomes with the implementation issue. At minimum, verify three versus four failures, window expiry, separate IPs, malformed fields, duplicate replay, review/reopen, persistent restart state, invalid configuration and unauthorized browser requests. Real blue-VM journal parsing, access denial, cursor resumption, boot/crash recovery and controlled red-to-blue tests require separate live evidence. Faculty questions about permitted tools, final report, deadline and presentation remain open.
+Record exact checks and outcomes with the implementation issue. At minimum, verify three versus four failures, window expiry, separate IPs, malformed fields, duplicate replay, review/reopen, persistent restart state, invalid configuration and unauthorized browser requests. Completed live journal, cursor, service and red-to-blue results are linked in the [verification index](verification/README.md). Remaining work includes additional real expired-window/concurrent-source/success-correlation scenarios, sender-timer reboot startup and later unattended cleanup/catch-up; those cases are not established by the completed tests. Faculty questions about permitted tools, final report, deadline and presentation remain open.
 
 ## November 17 deployment recovery
 

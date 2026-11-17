@@ -1,6 +1,10 @@
 # Heimdall college milestone
 
-Status: agreed planning direction, 2026-11-01, extended by the owner's 2026-11-04 request for a local browser dashboard. Runtime implementation and integration verification are in progress; the feature list below remains the target until linked evidence establishes completion. The earlier browser prototype is simulated. See [ADR 0003](adr/0003-shell-monitor-with-local-dashboard.md) for the dashboard amendment to [ADR 0002](adr/0002-shell-first-college-milestone.md), [the runbook](runbook.md) for setup, and [the blueprint](../HEIMDALL_BLUEPRINT.md) for the broader product.
+Status: agreed planning direction, 2026-11-01, extended by the owner's 2026-11-04 request for a local browser dashboard. Status reconciled November 17: the SSH monitor/dashboard, service controls, daily cleanup and optional real Discord delivery are implemented and deployed. The feature list below remains the full target, including unfinished optional work; see [implementation status](status.md) for the code/test/evidence mapping. The earlier browser prototype is simulated. See [ADR 0003](adr/0003-shell-monitor-with-local-dashboard.md) for the dashboard amendment to [ADR 0002](adr/0002-shell-first-college-milestone.md), [the runbook](runbook.md) for setup, and [the blueprint](../HEIMDALL_BLUEPRINT.md) for the broader product.
+
+## Current delivery checkpoint
+
+[November 17 Discord verification](verification/2026-11-17-discord.md) records four notices delivered in three messages, including real threshold/reopening alerts, grouped recovery after an injected sender-only failure, and timer-driven delivery. This is not evidence of a genuine Discord outage. The [deployment record](verification/2026-11-17-deployment.md) covers service-aware controls and retention; [earlier service evidence](verification/2026-11-07-systemd.md) covers real boot/crash tests. The dashboard still starts manually, and existing Ubuntu policy requires administrator console commands for monitor start/stop. VirusTotal, terminal menu, enforcement and the final academic submission remain unfinished.
 
 ## Goal and constraints
 
@@ -13,8 +17,8 @@ The owner supplied the 30-mark evaluation rubric and idea template on 2026-11-01
 - MacBook M4 Air, 16 GB RAM, hosting two Ubuntu ARM64 VMs.
 - Heimdall VM: SSH service, shell-based monitor, local records, command interface and local browser dashboard. A TUI remains optional later work.
 - Test VM: controlled SSH attempts against the Heimdall VM over a private virtual network.
-- Separate outbound connectivity for Discord and optional VirusTotal access.
-- Shell is the main implementation language; jq handles JSON records and Python 3's standard library provides the HTTP bridge. This owner-requested addition is not evidence of faculty approval of permitted technologies. Select and document the exact Ubuntu release and dependencies during setup.
+- Shared adapters provide outbound routes; real Discord delivery from blue was verified. Host-Only adapters carry controlled SSH tests. Separate standalone reachability evidence for red remains open.
+- Shell is the main implementation language; jq handles JSON records and Python 3's standard library provides the HTTP bridge. This owner-requested addition is not evidence of faculty approval of permitted technologies. Parallels Desktop is selected; blue's observed SSH banner reports Ubuntu 26.04.1 LTS and the live source is `journalctl -u ssh` JSON. Record/recheck versions when resuming.
 - Local files store state and history. Use restricted permissions, atomic updates and locking where needed; keep secrets out of reports and source control.
 - A Linux service manager is the intended boot/startup path, with duplicate prevention and bounded crash restarts. The repository includes a service template; a resolved instance was installed on blue and verified for boot startup, automatic crash recovery and bounded retries on 2026-11-07 ([evidence](verification/2026-11-07-systemd.md)). The dashboard remains manually started. Service-aware controls and daily cleanup were deployed and verified on November 17 ([evidence](verification/2026-11-17-deployment.md)); existing Ubuntu policy requires administrator console commands for start/stop. Closing the browser does not stop an independently running monitor.
 - The dashboard defaults to loopback; binding a specific trusted local IP requires an explicit launch option. Owner-token login and protected mutations govern review, configuration and monitor start/stop. No automatic firewall, adapter or router changes accompany dashboard access.
@@ -120,6 +124,6 @@ This is a target sequence, not a guarantee of feature completion. Prioritize liv
 ## Open prerequisites
 
 - Final-report template applicability, any separate course requirements, exact submission date, presentation duration and title-page dates; the marking rubric and idea template have been received and mapped.
-- Final VM software, Ubuntu release and working SSH log examples.
-- External account credentials, collected securely only when integration setup is needed.
+- Additional live expired-window, concurrent-source and success-correlation evidence; Discord timer startup after a fresh reboot and later unattended cleanup/catch-up evidence. The VM platform, blue version and exported SSH examples are already recorded.
+- Optional VirusTotal credentials if that provider is implemented. Discord is already privately configured for the owner-approved test destination; its credential must stay out of documents and Git.
 - Detailed SSH response design review and recovery evidence before automatic enforcement.

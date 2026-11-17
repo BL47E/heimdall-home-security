@@ -1,6 +1,6 @@
 # Historical project artifacts
 
-These files predate the shell-first college milestone and the working control panel. Keep them as historical references; use the [current plan](../college-milestone-plan.md), [runbook](../runbook.md) and [evaluation alignment](../evaluation-alignment.md) for current scope and requirements.
+These files predate the shell-first college milestone and the working control panel. Keep them as historical references; use the [current plan](../college-milestone-plan.md), [runbook](../runbook.md) and [evaluation alignment](../evaluation-alignment.md) for current scope and requirements. The [current status matrix](../status.md) and [verification index](../verification/README.md) describe implemented behavior; archive artifacts and faculty originals are intentionally preserved rather than rewritten during status updates.
 
 | Retained file | Earlier location | Purpose |
 | --- | --- | --- |

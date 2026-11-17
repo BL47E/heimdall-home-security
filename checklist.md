@@ -4,14 +4,14 @@ Current scope: [college milestone](docs/college-milestone-plan.md), [ADR 0002](d
 
 Status: CLI and dashboard 0.1.0 are deployed on blue. Live status, preserved alert history, owner authentication and Host-Only access were verified on 2026-11-05; see [the diary](diary.md) and [earlier CLI verification](docs/verification/2026-11-04-cli-blue.md). Real red-to-blue threshold alerting, review reopening and manual console recovery after a monitor crash were verified on 2026-11-07 ([evidence](docs/verification/2026-11-07-red-blue-recovery.md)). Boot startup and bounded automatic systemd crash recovery were verified on blue ([service evidence](docs/verification/2026-11-07-systemd.md)). GitHub Issues are the implementation tracker; see the [build backlog](docs/build-backlog.md). Track actual contribution by both students.
 
-Latest live state: 99 events and two unchanged alerts after one new red-source password failure was ingested exactly once.
+Latest recorded checkpoint, November 17 after Discord testing: 136 events, three alerts, four delivered notices in three Discord messages and zero pending notices. Monitoring stayed healthy. See [current status](docs/status.md) and [Discord evidence](docs/verification/2026-11-17-discord.md).
 
-Progress reconciled on 2026-11-17 against the [source checkpoint](docs/verification/2026-11-17-source.md) and [live deployment evidence](docs/verification/2026-11-17-deployment.md). Planning checkboxes record agreed choices; implementation checkboxes identify their evidence. GitHub decision tickets remain open until owner answers resolve them.
+Progress reconciled on 2026-11-17 against the [source checkpoint](docs/verification/2026-11-17-source.md), [live deployment evidence](docs/verification/2026-11-17-deployment.md) and [Discord verification](docs/verification/2026-11-17-discord.md). Planning checkboxes record agreed choices; implementation checkboxes identify their evidence. GitHub decision tickets remain open until owner answers resolve them.
 
 ## Resume the lab
 
 - Blue remains at `10.37.129.3`; red at `10.37.129.4`. Both were observed running on November 17. Recheck addresses and service health when resuming.
-- Blue's deployed release is `/home/bl47eheim/heimdall/releases/0.1.0-ecaec12/heimdall-0.1.0`, launched through `~/heimdall/heimdall`. The monitor and cleanup timer are enabled; the dashboard was started manually at `http://10.37.129.3:8765`.
+- Blue's deployed release is `/home/bl47eheim/heimdall/releases/0.1.0-ecaec12/heimdall-0.1.0`, launched through `~/heimdall/heimdall`. The monitor, cleanup timer and Discord sender timer are enabled; the dashboard was started manually at `http://10.37.129.3:8765`.
 - Service-aware CLI/browser controls are deployed. Existing Ubuntu policy denies unprivileged start/stop: the interface shows administrator console instructions and never starts a separate reader. Use `sudo systemctl start|stop|restart heimdall-monitor` in blue's terminal.
 - The daily cleanup timer is installed, has triggered, and the cleanup service completed successfully. State is backed up privately on blue. Blocking remains unimplemented and its recovery gate remains open.
 
@@ -83,7 +83,7 @@ Acceptance: three failures do not alert, the fourth within the window does, expi
 
 ## 3. Local investigations and management — Days 4–5
 
-- [x] Implement restricted local storage, atomic updates and OS advisory locking; Ubuntu tests exercise crash recovery, and live stop/start preserves journal state. Boot recovery remains below.
+- [x] Implement restricted local storage, atomic updates and OS advisory locking; Ubuntu tests exercise crash recovery, and live stop/start preserves journal state. Boot recovery is recorded in the service checks below.
 - [x] Add alert listing, inspection, review/reopen, review history and simple readable report output (local CLI/HTTP tests).
 - [x] Reopen a reviewed active alert on new failures; a later burst becomes a new alert (synthetic tests).
 - [x] Add shared CLI/browser operations and honest monitoring/provider status (real HTTP-to-CLI tests); optional TUI remains planned.
@@ -141,7 +141,7 @@ Acceptance: the core demo works before enforcement work starts. No Mac firewall 
 - [ ] Document the problem, existing-tool comparison and feasibility with verifiable sources.
 - [ ] Keep objectives, algorithms, implemented modules and evidence aligned; distinguish simulated and planned work.
 - [x] Record current CLI/VM and local dashboard inputs, expected/actual outcomes and limitations under `docs/verification/`, the diary and issue evidence.
-- [ ] Complete remaining boot/recovery, provider and final-demo evidence as those scenarios are implemented and exercised.
+- [ ] Capture the remaining live rule scenarios, sender-timer reboot startup, later unattended retention/catch-up and final-demo evidence; preserve already completed boot/crash and Discord results.
 - [ ] Record both students' meaningful contributions and rehearse each person's explanation.
 - [ ] Apply the confirmed report format when received. Leave faculty questions open until answered.
 - [ ] Freeze features, check secrets are excluded and rehearse the final presentation.
