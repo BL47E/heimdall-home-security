@@ -1,0 +1,19 @@
+# Manual template only. Replace every @...@ token and review before installation.
+# Delivery stays disabled until the owner configures and enables a destination.
+[Unit]
+Description=Heimdall optional Discord queue delivery
+
+[Service]
+Type=oneshot
+User=@OWNER@
+Group=@GROUP@
+WorkingDirectory=@REPO_DIR@
+Environment=HEIMDALL_DATA_DIR=@DATA_DIR@
+ExecStart=@REPO_DIR@/bin/heimdall discord flush
+TimeoutStartSec=90
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=@DATA_DIR@

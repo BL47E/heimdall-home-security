@@ -3,6 +3,24 @@ monitor_command() {
   [ "$#" = 1 ] || err 'Usage: monitor run|start|stop'
   action=$1
   "$ROOT/bin/heimdall" init >/dev/null
+  if [ "$action" = start ] || [ "$action" = stop ]; then
+    if [ "$action" = start ] && [ "$(jq -r '.mode' "$STATE")" = fixture ]; then err 'Fixture state cannot become live; use a separate live data directory'; fi
+    if [ "$action" = stop ] && [ "$(jq -r '.mode' "$STATE")" = fixture ]; then
+      "$ROOT/bin/heimdall" status
+      return
+    fi
+    manager_info=$(python3 "$ROOT/lib/service.py" "$ROOT" "$DATA" inspect)
+    manager=$(printf '%s\n' "$manager_info" | jq -r '.manager')
+    if [ "$manager" = unavailable ]; then
+      printf 'HEIMDALL_SERVICE_CONTROL: %s\n' "$(printf '%s\n' "$manager_info" | jq -r '.error')" >&2
+      exit 77
+    fi
+    if [ "$manager" = systemd ]; then
+      python3 "$ROOT/lib/service.py" "$ROOT" "$DATA" "$action" >/dev/null
+      "$ROOT/bin/heimdall" status
+      return
+    fi
+  fi
   case "$action" in
     start)
       if [ "$(jq -r '.mode' "$STATE")" = fixture ]; then err 'Fixture state cannot become live; use a separate live data directory'; fi
@@ -24,7 +42,10 @@ monitor_command() {
       fi
       "$ROOT/bin/heimdall" status
       ;;
-    run) monitor_run ;;
+    run)
+      python3 "$ROOT/lib/service.py" "$ROOT" "$DATA" check-run >/dev/null
+      monitor_run
+      ;;
     *) err 'Usage: monitor run|start|stop' ;;
   esac
 }

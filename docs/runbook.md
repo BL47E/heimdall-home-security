@@ -1,6 +1,6 @@
 # Running Heimdall
 
-This runbook covers the shell monitor and owner-requested local browser dashboard described in [ADR 0003](adr/0003-shell-monitor-with-local-dashboard.md). The first CLI is implemented and [tested on blue](verification/2026-11-04-cli-blue.md), including real fourth-failure alerts and restart persistence. The dashboard was verified on blue over loopback and from the Mac over Host-Only. [Deployment evidence](../diary.md#2026-11-05--dashboard-deployed-and-verified-on-blue) Commands and schemas follow [the runtime contract](runtime-contract.md); boot/systemd recovery and faculty acceptance of the dashboard remain open.
+This runbook covers the shell monitor and owner-requested local browser dashboard described in [ADR 0003](adr/0003-shell-monitor-with-local-dashboard.md). The first CLI is implemented and [tested on blue](verification/2026-11-04-cli-blue.md), including real fourth-failure alerts and restart persistence. The dashboard was verified on blue over loopback and from the Mac over Host-Only. [Deployment evidence](../diary.md#2026-11-05--dashboard-deployed-and-verified-on-blue) Commands and schemas follow [the runtime contract](runtime-contract.md); boot startup and bounded systemd recovery were verified on blue on 2026-11-07 ([evidence](verification/2026-11-07-systemd.md)); faculty acceptance of the dashboard remains open.
 
 ## What runs where
 
@@ -29,7 +29,7 @@ If the owner account cannot read SSH's system journal, an administrator must rev
 
 The current application version is `0.1.0`. From its release directory, `./bin/heimdall help` lists the commands, `./bin/heimdall version` prints the version, and `./bin/heimdall demo` runs a labelled synthetic walkthrough without changing live state. The CLI prints JSON for machine-readable operations; pipe a result to `jq` when inspecting it. `config history` shows saved configuration changes.
 
-For the verified installation on blue, use `~/heimdall/heimdall help` or `~/heimdall/heimdall status` from any directory. This launcher points to the release recorded in the [dashboard deployment entry](../diary.md#2026-11-05--dashboard-deployed-and-verified-on-blue). The previous launcher is saved as `~/heimdall/heimdall.before-dashboard`. The monitor was started manually and verified after the deployment SSH connection closed. After booting blue, check its status and start it manually if needed.
+For the verified installation on blue, use `~/heimdall/heimdall help` or `~/heimdall/heimdall status` from any directory. This launcher points to the release recorded in the [dashboard deployment entry](../diary.md#2026-11-05--dashboard-deployed-and-verified-on-blue). The previous launcher is saved as `~/heimdall/heimdall.before-dashboard`. The monitor is now managed by the enabled `heimdall-monitor.service` on blue. Check `systemctl status heimdall-monitor --no-pager` and `~/heimdall/heimdall status` after boot. Use `sudo systemctl start|stop|restart heimdall-monitor` to manage this installed service; the vertical bars mean choose one action. Current browser/CLI monitor controls act directly on the process and do not manage the unit. Avoid them for lifecycle changes on this service-managed installation until integration is implemented.
 
 In blue's terminal, enter the repository directory before running these commands:
 
@@ -64,13 +64,21 @@ An alert's review status records the owner's investigation progress. New failure
 
 Stop the background reader with `./bin/heimdall monitor stop`. Foreground operation for a service manager is `./bin/heimdall monitor run`.
 
-Transaction and monitor locks use an operating-system advisory lock through a small Python standard-library helper. A process crash releases its lock automatically; the next monitor owns and cleans only its known scratch files. Keep `.transaction.lock` and `.monitor.lock` in place while any Heimdall process runs. Never remove locks to bypass an active writer. Mock crash/restart tests establish local recovery behavior; boot and systemd recovery still need Ubuntu evidence.
+Transaction and monitor locks use an operating-system advisory lock through a small Python standard-library helper. A process crash releases its lock automatically; the next monitor owns and cleans only its known scratch files. Keep `.transaction.lock` and `.monitor.lock` in place while any Heimdall process runs. Never remove locks to bypass an active writer. Mock crash/restart tests establish local behavior. Real blue service crash recovery, retry limiting and boot startup are recorded in [service evidence](verification/2026-11-07-systemd.md).
 
 ## Packaging a build for the VM
 
 On the development Mac, run `./scripts/package.sh` from the repository. It writes `dist/heimdall-0.1.0.tar.gz` and a SHA-256 checksum file. Only the allowlisted application, tests, synthetic fixtures and selected documentation are packaged; local evidence, tokens and caches are excluded. Transfer both files to blue using verified SSH, check `sha256sum -c heimdall-0.1.0.tar.gz.sha256` there, then extract into a fresh release directory under `~/heimdall/releases`. Keep an earlier release and live state intact when updating. Start the new build using its own `bin/heimdall` path; no system-wide installation or PATH edit is required.
 
-Retention cleanup is currently explicit: `./bin/heimdall cleanup`. It uses the configured retention period; daily scheduling remains planned. Do not claim the uninstalled monitor service template schedules cleanup.
+Retention cleanup runs explicitly with `./bin/heimdall cleanup`. It uses the configured retention period. Source templates now provide an optional daily schedule; no cleanup timer is installed on blue. The installed monitor service does not schedule cleanup.
+
+### Optional daily retention schedule
+
+`deploy/heimdall-cleanup.service.in` and `deploy/heimdall-cleanup.timer.in` are manual templates. Resolve the service's owner, group, absolute release directory and private state directory to the same values as the monitor. The cleanup command needs no journal group and runs as that owner with writes limited to the state directory. It does not start, stop or restart monitoring.
+
+The timer runs daily with up to fifteen minutes of randomized delay. `Persistent=true` requests one catch-up run after downtime, rather than one run for every missed day. Review the resolved units and run `systemd-analyze verify` on Ubuntu before installation. After explicit owner approval, install only those reviewed units, reload systemd and enable `heimdall-cleanup.timer`; inspect `systemctl list-timers heimdall-cleanup.timer` and the cleanup service journal to verify actual execution. These instructions have not activated a schedule on blue.
+
+Local rendered-unit tests verify the command against disposable state, including preservation of supporting evidence and review history for retained alerts. Pending-notification retention must be implemented alongside delivery state; active block retention remains a future enforcement obligation because blocks are not implemented.
 
 ## Browser login on blue
 
@@ -124,13 +132,15 @@ The fixture is synthetic, not an export of blue's journal. Its provenance notes 
 
 ## Optional manual systemd setup
 
-`deploy/heimdall-monitor.service.in` is an **uninstalled template**, not an active service. systemd is Ubuntu's service manager: it can start the monitor at boot and attempt a limited number of restarts after failure. It does not run the dashboard or enable blocking.
+The current source includes service-aware monitor controls with automatic detection of the fixed `heimdall-monitor.service`. These source changes have local fake-manager and CLI/HTTP checks; they are not yet deployed on blue. They verify the installed unit's release, state directory and owner, then request noninteractive service control. Without an existing authorization policy, the command fails with a manual `sudo systemctl` instruction. It never stores a sudo password or falls back to an unsupervised monitor. Continue using the explicit systemctl commands above for blue's earlier deployed release until the source update is deployed and checked.
+
+`deploy/heimdall-monitor.service.in` is a template requiring per-host review. A resolved instance is installed and enabled on blue, with boot/crash/retry-limit checks recorded in [service evidence](verification/2026-11-07-systemd.md). systemd is Ubuntu's service manager: it can start the monitor at boot and attempt a limited number of restarts after failure. It does not run the dashboard or enable blocking.
 
 Before installing, choose the owner account, absolute repository path and private absolute state directory. Replace every `@...@` placeholder, inspect the resulting file and verify its commands manually under that account. The template grants the service journal-read access using `SupplementaryGroups=systemd-journal`; an administrator should review that broader read access. The state directory must already exist and belong to the selected user.
 
 Only after manual review, place the completed unit at `/etc/systemd/system/heimdall-monitor.service`, run `sudo systemctl daemon-reload`, and choose whether to start it with `sudo systemctl start heimdall-monitor`. Enable boot startup separately with `sudo systemctl enable heimdall-monitor` when ready. Do not run a separate CLI-started monitor alongside the service. Check both `systemctl status heimdall-monitor` and `./bin/heimdall status` under the configured account/state path. A daemon restart is not evidence of complete journal coverage.
 
-To undo the service setup, stop and disable that unit, remove only its reviewed unit file, and reload systemd. Keep the state directory until the owner decides how to archive its records. No setup command in this section has been executed automatically.
+To undo the service setup, stop and disable that unit, remove only its reviewed unit file, and reload systemd. Keep the state directory until the owner decides how to archive its records. The resolved blue unit was installed with owner authorization on 2026-11-07; this section is not an instruction to reinstall it. Blue uses its existing owner journal permissions without the template’s additional systemd-journal group.
 
 ## Verification and remaining evidence
 

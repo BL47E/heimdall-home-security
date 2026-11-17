@@ -2,15 +2,15 @@
 
 Current scope: [college milestone](docs/college-milestone-plan.md), [ADR 0002](docs/adr/0002-shell-first-college-milestone.md), the owner's [dashboard extension in ADR 0003](docs/adr/0003-shell-monitor-with-local-dashboard.md) and [evaluation alignment](docs/evaluation-alignment.md). The broader blueprint remains future scope where the milestone overrides it.
 
-Status: CLI and dashboard 0.1.0 are deployed on blue. Live status, preserved alert history, owner authentication and Host-Only access were verified on 2026-11-05; see [the diary](diary.md) and [earlier CLI verification](docs/verification/2026-11-04-cli-blue.md). Boot/crash recovery and a controlled red-to-blue alert demonstration remain open. GitHub Issues are the implementation tracker; see the [build backlog](docs/build-backlog.md). Track actual contribution by both students.
+Status: CLI and dashboard 0.1.0 are deployed on blue. Live status, preserved alert history, owner authentication and Host-Only access were verified on 2026-11-05; see [the diary](diary.md) and [earlier CLI verification](docs/verification/2026-11-04-cli-blue.md). Real red-to-blue threshold alerting, review reopening and manual console recovery after a monitor crash were verified on 2026-11-07 ([evidence](docs/verification/2026-11-07-red-blue-recovery.md)). Boot startup and bounded automatic systemd crash recovery were verified on blue ([service evidence](docs/verification/2026-11-07-systemd.md)). GitHub Issues are the implementation tracker; see the [build backlog](docs/build-backlog.md). Track actual contribution by both students.
 
 Progress reconciled on 2026-11-05 against [the diary](diary.md), [CLI/VM verification](docs/verification/2026-11-04-cli-blue.md), [dashboard verification](docs/verification/2026-11-05-dashboard.md) and [cleanup issue 14](https://github.com/BL47E/heimdall-home-security/issues/14). Planning checkboxes record agreed choices; implementation checkboxes identify their evidence below. The VM power, addresses and blue monitor status were rechecked live on 2026-11-05; see the diary. Earlier lab observations do not establish current state beyond that checkpoint.
 
 ## Resume the lab
 
-- At the documentation handoff, Parallels reported blue and red stopped. Start blue, confirm its current Host-Only address and start the monitor and dashboard manually. [Runbook](docs/runbook.md)
+- On 2026-11-07 both VMs were running: blue `10.37.129.3`, red `10.37.129.4`. The monitor now runs as an enabled systemd service; the dashboard remains manually started. Recheck status when resuming. [Runbook](docs/runbook.md)
 - The last verified dashboard address from the Mac was `http://10.37.129.3:8765`. The latest browser checks covered the sidebar at phone, tablet and desktop widths. [Deployment and sidebar evidence](diary.md)
-- Next live checks are the controlled red-to-blue alert demonstration, console recovery and systemd boot and crash recovery. The configuration validation follow-up is tracked separately below.
+- Service installation, automatic crash recovery, retry limiting and startup after a real reboot passed on blue. Next lifecycle work is aligning CLI/browser controls with the service; use systemctl to manage the service meanwhile. Manual console monitor recovery passed; block-related recovery remains untested. The configuration validation follow-up is tracked separately below.
 
 ## Panel design and repository cleanup — completed locally and saved
 
@@ -54,15 +54,17 @@ Progress reconciled on 2026-11-05 against [the diary](diary.md), [CLI/VM verific
 ## 1. Ubuntu lab and log contract — Day 1
 
 - [x] Set up two Ubuntu ARM64 VMs with Host-Only test adapters and separate Shared adapters; record observed environment and addresses in the diary.
-- [ ] Demonstrate and record recovery through the VM console. Shared networking is not full isolation from the host or LAN.
+- [x] Demonstrate manual monitor recovery through the VM console after a forced crash, preserving counts and available coverage ([2026-11-07 evidence](docs/verification/2026-11-07-red-blue-recovery.md)). Shared networking is not full isolation from the host or LAN.
+- [ ] Verify fresh console login and recovery for the reviewed SSH-block scenario before enabling any real block.
 - [x] Verify controlled red-to-blue SSH access over Host-Only, including host-key checking and source/destination addresses.
 - [x] Record separate outbound routes through the Shared adapters.
 - [ ] Verify and record separate outbound connectivity where configured.
 - [x] Inspect real successful and invalid-user failed-password records; identify `journalctl -u ssh`, observed `sshd-session` messages, displayed timestamps/time zone and non-root read access in the tested account.
 - [x] Export structured sanitized successful, invalid-user and existing-account wrong-password samples; fixture documentation records omitted fields and pseudonymized cursors.
-- [x] Document dependencies, startup/shutdown, packaging and optional manual service setup/removal in the runbook; the service template remains uninstalled.
+- [x] Document dependencies, startup/shutdown, packaging and optional manual service setup/removal in the runbook; a resolved service instance is now installed and verified on blue.
 - [x] Capture synthetic boundary/multiple-IP/missing-field/malformed scenarios and real Mac-to-blue three/four-failure evidence.
-- [ ] Capture any additional real expired-window, multiple-IP and red-to-blue end-to-end evidence required for the final demonstration.
+- [x] Capture real red-to-blue three/four-failure alerting, review/fifth-failure reopening, separate retained Mac-source alert and manual crash-recovery evidence ([2026-11-07](docs/verification/2026-11-07-red-blue-recovery.md)).
+- [ ] Capture additional real expired-window and concurrent multiple-IP scenarios required for the final demonstration; retained alerts from separate sessions do not establish concurrent-window behavior.
 
 Acceptance: representative real logs and repeatable offline samples are available; tests remain on the VM network. Record chosen versions and environment rather than guessing log paths.
 
@@ -83,14 +85,19 @@ Acceptance: three failures do not alert, the fourth within the window does, expi
 - [x] Reopen a reviewed active alert on new failures; a later burst becomes a new alert (synthetic tests).
 - [x] Add shared CLI/browser operations and honest monitoring/provider status (real HTTP-to-CLI tests); optional TUI remains planned.
 - [x] Implement manual monitor start/stop, singleton prevention, cursor resume and readable failure state; verify live stop/start on blue and fake-journal crash scenarios locally.
-- [x] Provide a manual systemd template with bounded restart settings and runbook instructions; this is not an installed or boot-tested service.
-- [ ] Install and verify the reviewed systemd setup on blue, including boot startup and bounded recovery after a crash.
-- [x] Implement explicit retention cleanup using configured days and preserving evidence referenced by retained alerts; default 60 days. Notification/block storage is not implemented yet.
+- [x] Provide a manual systemd template with bounded restart settings and runbook instructions; the resolved blue instance is now installed and boot-tested.
+- [x] Install and verify the reviewed systemd setup on blue, including boot startup and bounded recovery after a crash ([2026-11-07 service evidence](docs/verification/2026-11-07-systemd.md)).
+- [x] Align source CLI/browser monitor controls with the fixed systemd unit, identity checks and noninteractive authorization failure handling (local fake-manager and HTTP checks; not yet deployed on blue).
+- [ ] Deploy and verify service-aware CLI/browser controls on blue; the currently installed release still acts directly on the monitor process.
+- [x] Implement explicit retention cleanup using configured days and preserving evidence referenced by retained alerts; default 60 days. Local cleanup now preserves pending Discord notifications and their evidence; active blocks remain unimplemented.
+- [x] Provide reviewed-shape daily cleanup service/timer source templates and disposable rendered-command checks; the timer is not installed on blue and Ubuntu unit verification remains open.
 - [ ] Implement daily 60-day retention while preserving pending notifications, active blocks and required supporting evidence.
 
 Acceptance: background monitoring survives closing the launching terminal or browser; local records survive restart, and future delivery state must also survive. Review changes do not change firewall state. A stopped or failing monitor is never shown as healthy.
 
 ## 4. Discord delivery — Day 6
+
+Local queue, transport and fake-endpoint tests are implemented and checked in the [November 17 source checkpoint](docs/verification/2026-11-17-source.md). The items below remain end-to-end acceptance gates; no real Discord destination is configured or live-tested.
 
 - [ ] Configure the optional webhook securely; exclude secrets from source, logs, reports and the interface.
 - [ ] Send informative live alerts and notifications when new activity reopens a reviewed alert.

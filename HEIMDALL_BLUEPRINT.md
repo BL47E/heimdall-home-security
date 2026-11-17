@@ -2,7 +2,7 @@
 
 ## College milestone scope amendment
 
-Owner update, 2026-11-04: implement the shell monitor with a local browser dashboard for alert review, monitor control and validated configuration. [ADR 0003](docs/adr/0003-shell-monitor-with-local-dashboard.md) extends the earlier terminal-only decision: shell/jq owns parsing, rules and state, while a Python standard-library HTTP bridge provides authenticated local access. The first runtime implementation and integration verification are in progress; the broader architecture below remains future direction. See the [runbook](docs/runbook.md) and [runtime contract](docs/runtime-contract.md). Faculty questions and the separate SSH-blocking approval/recovery gate remain open.
+Owner update, 2026-11-04: implement the shell monitor with a local browser dashboard for alert review, monitor control and validated configuration. [ADR 0003](docs/adr/0003-shell-monitor-with-local-dashboard.md) extends the earlier terminal-only decision: shell/jq owns parsing, rules and state, while a Python standard-library HTTP bridge provides authenticated local access. The shell monitor and dashboard are deployed on blue, with boot/crash recovery verified; newer local changes are tracked in the milestone checklist; the broader architecture below remains future direction. See the [runbook](docs/runbook.md) and [runtime contract](docs/runtime-contract.md). Faculty questions and the separate SSH-blocking approval/recovery gate remain open.
 
 The agreed college milestone uses shell scripts, a terminal menu and commands, local files and two Ubuntu ARM64 VMs. Its ten-day delivery priorities and planned behavior are recorded in [the college milestone plan](docs/college-milestone-plan.md) and [ADR 0002](docs/adr/0002-shell-first-college-milestone.md). Those documents govern this milestone where they differ from the broader architecture below. The supplied evaluation rubric is mapped in [evaluation alignment](docs/evaluation-alignment.md); the supplied idea template is recorded there, while its applicability to the final report, title-page dates and any separate course requirements remain open for faculty confirmation. Automatic SSH source blocking is a last-priority, VM-only proposal that requires detailed design review and tested recovery before activation. The remaining sections describe the broader product direction, not implemented capabilities.
 
@@ -16,7 +16,7 @@ Heimdall is a planned, local-first security assistant for personal home systems:
 
 The product goal is **a clear, local security overview for a home server or NAS, without running a full SOC stack**. Heimdall combines selected strengths of security monitoring, indicator enrichment, incident history, and workflow notification in a small, understandable package.
 
-This is a product blueprint. The current repository contains documentation and browser simulations; live collection, analysis, persistence, and notification are planned work.
+This is the broader product blueprint. The shell-first college milestone now implements SSH collection, local rules, file persistence and a dashboard. Its current status is recorded in README and the milestone checklist; the NAS/router architecture below remains planned.
 
 ## Audience and problem
 
@@ -230,4 +230,4 @@ These tools already solve substantial parts of the problem. Heimdall should be c
 - `docs/index.html` is the documentation index for current guidance and historical references.
 - `docs/archive/browser-simulation.html` preserves the earlier interactive guide and simulation; it does not run the monitor. Duplicate historical exports are recorded in `docs/archive/README.md`.
 - The sample terminal output is illustrative and does not call an external service.
-- No live syslog receiver, detection engine, database, dashboard, or notification provider is included yet.
+- The shell-first SSH runtime and dashboard live in `bin/`, `lib/` and `web/`; see README for verification. The broader syslog receiver, SQLite database and NAS/router integrations remain planned.

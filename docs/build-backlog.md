@@ -2,7 +2,7 @@
 
 GitHub Issues are the implementation tracker. This index links the initial work packages; issue comments hold current ownership, status and verification evidence. Ready-for-human items cover lab/team work; dependent implementation packages begin as needs-triage until their inputs are settled.
 
-The owner-requested shell monitor and browser dashboard extension is tracked in [implementation issue 13](https://github.com/BL47E/heimdall-home-security/issues/13). Its [local verification checkpoint](https://github.com/BL47E/heimdall-home-security/issues/13#issuecomment-6633729764) covers synthetic monitor tests and actual HTTP-to-shell integration; live Ubuntu/service evidence remains outstanding.
+The owner-requested shell monitor and browser dashboard extension is tracked in [implementation issue 13](https://github.com/BL47E/heimdall-home-security/issues/13). Its [local verification checkpoint](https://github.com/BL47E/heimdall-home-security/issues/13#issuecomment-6633729764) covers synthetic monitor tests and actual HTTP-to-shell integration; later live Ubuntu and service evidence is recorded in the [checklist](../checklist.md); newer local changes are covered in the [November 17 checkpoint](verification/2026-11-17-source.md).
 
 Design decisions are tracked separately in [Chart the shell-first college milestone and CI decisions](https://github.com/BL47E/heimdall-home-security/issues/8). Query its native child issues for open decisions; see [Wayfinding operations](agents/issue-tracker.md#wayfinding-operations). The [development diary](../diary.md) records dated observations and the [checklist](../checklist.md) distinguishes completed preparation from planned runtime behavior.
 

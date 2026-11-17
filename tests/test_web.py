@@ -9,6 +9,8 @@ import subprocess
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
+import test_service
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("webserver", ROOT / "web/server.py")
@@ -279,6 +281,26 @@ class WebTest(unittest.TestCase):
                 {"Origin": "http://" + self.host, "Content-Type": "application/json"},
             )[0]
             self.assertEqual(status, 401 if index < 5 else 429)
+
+    def test_service_control_denial_uses_real_cli_without_fallback(self):
+        fixture = test_service.ServiceManagerTests()
+        fixture.setUp()
+        try:
+            fixture.properties["Environment"] = "HEIMDALL_DATA_DIR=" + str(self.data)
+            fixture.write_properties()
+            (fixture.base / "deny").touch()
+            headers = self.login()
+            with patch.dict(os.environ, fixture.env):
+                status, _, body = self.request("GET", "/api/status", headers=headers)
+                self.assertEqual(status, 200)
+                self.assertEqual(json.loads(body)["monitor"]["manager"], "systemd")
+                for action in ("start", "stop"):
+                    status, _, body = self.request("POST", "/api/monitor/" + action, "{}", headers)
+                    self.assertEqual(status, 503)
+                    self.assertIn("systemctl", json.loads(body)["error"])
+            fixture.assert_no_fallback()
+        finally:
+            fixture.doCleanups()
 
     def test_cli_failure_is_visible_not_empty_success(self):
         headers = self.login()

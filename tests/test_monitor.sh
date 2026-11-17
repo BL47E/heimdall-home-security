@@ -15,6 +15,6 @@ for p in '{"threshold":1}' '{"threshold":2.5}' '{"threshold":true}' '{"threshold
   if "$CLI" config set "$p" >/dev/null 2>&1; then fail "accepted $p"; fi
 done
 "$CLI" config get | jq -e '.threshold == 2 and .window_seconds == 3600' >/dev/null || fail 'invalid patch changed state'
-"$CLI" status | jq -e '.monitor.coverage == "unavailable" and .providers.discord == "not_implemented"' >/dev/null || fail status
+"$CLI" status | jq -e '.monitor.coverage == "unavailable" and .providers.discord == "disabled" and .discord.pending == 0' >/dev/null || fail status
 python3 "$ROOT/tests/test_monitor.py"
 printf '%s\n' 'PASS: shell state/configuration and monitor scenario tests'

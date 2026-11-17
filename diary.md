@@ -1,5 +1,25 @@
 # Heimdall development diary
 
+## 2026-11-07 — Monitor boot startup and bounded automatic recovery
+
+Following the owner's administrator authorization, installed the reviewed resolved service on blue as a root-owned mode-644 unit, running the monitor as `bl47eheim`. Stopped the manual process before starting the service. Used existing journal permissions without adding a group or running Heimdall as root.
+
+Verified automatic replacement after SIGKILL: PID 5797 became 5909, restart count 1, with the same 73 events and two alerts. Repeated crashes reached the configured three-starts-per-minute limit; the journal reported start requests repeated too quickly, and Heimdall showed error/unavailable coverage. Reset the failure counter and restored the service.
+
+Rebooted blue and completed a fresh console login. A changed boot ID and current-boot journal established automatic startup at 21:48:18 IST, PID 1101, before any manual monitor launch. Heimdall had available coverage, 77 events and two retained alerts. A fresh red-source failure was ingested after reboot, while the prior five-failure alert and review history remained intact. Restarted the separate dashboard manually and verified HTTP 200 from the Mac. Both VMs remain running; the monitor is enabled at boot, dashboard startup remains manual.
+
+[Service verification](docs/verification/2026-11-07-systemd.md) records evidence and limitations. Current CLI/browser controls act directly on the monitor process rather than managing the service; use systemctl on blue until those controls are integrated. Updated the checklist, README, milestone status and runbook. No runtime source change, firewall/network change, student-contribution claim, Git commit or push accompanies this work. Credentials were not embedded in commands or saved evidence.
+
+## 2026-11-07 — Real red-to-blue alerting and console recovery
+
+The owner supplied both running VMs and authorized a live verification work package. Confirmed blue at `10.37.129.3` and red at `10.37.129.4`. Blue initially had a stopped monitor, unavailable coverage, 44 events and one preserved alert. Started the monitor and dashboard manually using the deployed 0.1.0 release.
+
+Real controlled failures from red produced no alert at three and a new Medium alert at four. Reviewing that alert then sending a fifth failure reopened it with both review transitions retained. The previous Mac-source alert remained separate. Verified the monitor process identity, forced its crash and observed honest error/unavailable status. Restarted it from blue's console: 73 events, two alerts and the red count of five were preserved. Authenticated dashboard HTTP status and alert data agreed with the CLI. The monitor and dashboard were left running manually.
+
+Prepared the service file with blue's actual paths and account; Ubuntu's `systemd-analyze verify` returned 0. Omitted an extra journal group because the account already has journal access. The unit remains uninstalled, and noninteractive sudo was unavailable. Administrator authentication, installation, automatic crash restart and reboot verification remain next. Manual console recovery does not establish recovery from a source block or fresh console login. No firewall, network, account-access or boot-service changes were made.
+
+[Sanitized verification record](docs/verification/2026-11-07-red-blue-recovery.md) documents commands, results, limitations and private evidence paths on blue. No runtime source change, commit or push accompanies this work. The assistant executed the checks; student contributions and faculty questions remain unresolved.
+
 ## 2026-11-05 — Sidebar and lab handoff
 
 - Commit `4d2b389` removes the persistent sidebar underline and the animated hover line. The active link uses brighter, medium-weight text, hover brightens the label, and keyboard focus shows an outline. Blue served the updated stylesheet, and browser checks verified these states at 390, 768 and 1360 pixels.

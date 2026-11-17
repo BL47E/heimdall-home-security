@@ -33,13 +33,21 @@ All successful commands below return one JSON value on stdout, with diagnostics 
 | `heimdall config history` | Return recorded configuration changes as JSON. |
 | `heimdall config set JSON` | Validate a JSON object patch, reject unknown keys, atomically save and return full configuration. No partial update on invalid input. |
 | `heimdall ingest FILE` | Read newline-delimited journal JSON from a local file or `-` for stdin. Return counts such as `processed`, `duplicates`, `unsupported`, `malformed`; persist useful evidence. This is offline ingestion, never evidence of a healthy live monitor. |
-| `heimdall monitor run` | Foreground live journal consumer for a service manager. Stdout may be reserved for operational messages; documented exception to JSON command output. |
-| `heimdall monitor start` | Start independent background journal consumer; return status. Detect duplicates. |
-| `heimdall monitor stop` | Stop only a proven Heimdall monitor process; return status. No arbitrary PID kills. |
+| `heimdall monitor run` | Foreground live journal consumer for a service manager or standalone use. An installed matching system unit owns this entry point; a managed invocation must belong to that unit's actual process control group. Stdout may be reserved for operational messages; documented exception to JSON command output. |
+| `heimdall monitor start` | Use the matching installed system unit when present; otherwise start an independent background journal consumer. Return status; detect duplicates. Never fall back to a detached process after a service control failure. |
+| `heimdall monitor stop` | Stop the matching installed system unit when present; otherwise stop only a proven standalone Heimdall monitor process. Return status. No arbitrary PID kills. |
 | `heimdall report ID` | Readable text investigation report, documented exception to JSON output. |
 | `heimdall cleanup` | Apply retention safely and return removal counts. |
 
 No web endpoint accepts arbitrary shell commands, filesystem paths, journal units or code. CLI ingestion is local-only. If a command cannot be implemented in the first pass, it must fail explicitly and the dashboard must label it unavailable.
+
+### Monitor service ownership
+
+Source implementation selects `HEIMDALL_MONITOR_MANAGER=auto` by default; `standalone` and `systemd` are explicit alternatives. Only the system-scope `heimdall-monitor.service` is supported. Read-only inspection verifies the unit's owner, working directory, exact foreground CLI invocation and `HEIMDALL_DATA_DIR` against the current release and state. An absent unit permits standalone operation in auto mode. A loaded but mismatched, ambiguous or unreadable unit fails closed; choosing standalone does not override a matching installed unit. Fixture status remains usable without querying the live service.
+
+Service operations use bounded, noninteractive `systemctl --system --no-ask-password` calls. They never invoke sudo, save passwords, install authorization policy or request an arbitrary unit. Existing system authorization determines whether control succeeds. If authorization is unavailable, exit 77 with a service-control diagnostic and a manual administrator command; the browser returns an actionable 503 response. No direct process control follows a service failure.
+
+Status adds `monitor.manager` and `monitor.service` metadata. A system unit reported active is insufficient for available coverage: the saved PID must still be alive, match the CLI process and equal the unit's MainPID, and live journal coverage must have been established. Inactive, failed, mismatched or unreadable service state cannot report healthy monitoring. A known unit-owned PID's Linux control-group membership prevents standalone fallback if service inspection disappears. This local source integration requires separate deployment verification on blue; the earlier service evidence tested the installed unit with the previous process-only CLI.
 
 ## Configuration
 
@@ -74,7 +82,7 @@ Order and replay: persist cursor-based deduplication with state so restart canno
 `events` may be omitted in list responses but must be present on inspect. `review_history` records timestamp, resulting review status and reason (`owner` or `new_failure`).
 
 ```json
-{"monitor":{"state":"stopped","pid":null,"source":"journalctl -u ssh","last_event_at":null,"last_error":null,"coverage":"unavailable"},"counts":{"events":0,"alerts":0,"needs_review":0},"providers":{"discord":"not_implemented","virustotal":"not_implemented"},"mode":"live","config":{"threshold":4,"window_seconds":300,"retention_days":60}}
+{"monitor":{"state":"stopped","pid":null,"source":"journalctl -u ssh","last_event_at":null,"last_error":null,"coverage":"unavailable"},"counts":{"events":0,"alerts":0,"needs_review":0},"providers":{"discord":"disabled","virustotal":"not_implemented"},"mode":"live","config":{"threshold":4,"window_seconds":300,"retention_days":60}}
 ```
 
 State values: `running`, `stopped`, `error`; coverage `available` only after a live journal read is proven and consumer is alive, otherwise `unavailable`. Mode `fixture` means offline samples, never live healthy monitoring. Preserve last errors and report permission/read/child-process failure. Quiet logs alone do not imply failure. Do not claim integrations work.
@@ -110,3 +118,9 @@ The dashboard presents honest status, alert list and evidence, recent events, re
 Page navigation uses real links: `/` and `/overview` select Overview, `/investigations` selects alert review, `/activity` selects recent events and `/settings` selects configuration. Exactly one page is visible after authentication. Direct loads and browser Back/Forward retain the intended route; unsaved configuration edits trigger the browser's leave-page warning. Authentication loss clears private page content, and restored browser-history pages revalidate their session before showing records. Refresh responses from an earlier session cannot repopulate private content after sign-out.
 
 JetBrains Mono Regular and Medium load from the exact public asset URLs `/fonts/JetBrainsMono-Regular.woff2` and `/fonts/JetBrainsMono-Medium.woff2`, served as `font/woff2`; no external font service is required. Their SIL Open Font License is retained in `web/static/fonts/OFL.txt`. Unknown routes and assets, encoded paths, query strings, fragments and non-origin-form request targets are rejected rather than falling through to a general filesystem server.
+
+## Local delivery extension — November 17 source checkpoint
+
+`discord configure` reads an approved HTTPS Discord webhook from stdin and saves it privately; `configure-test` accepts only explicit loopback test destinations. `enable`, `disable`, `status` and `flush` manage optional delivery. It starts disabled and does not enqueue old alerts retroactively. Created alerts and new failures reopening reviewed alerts enqueue atomically. One flush handles only its initial bounded snapshot; later findings remain pending. Pending notices and their alert evidence survive cleanup. Fake-endpoint tests establish retries, rate limits, grouped messages and ambiguous outcomes; actual Discord delivery remains unverified. See [delivery design](discord-delivery-design.md).
+
+Live monitor status includes its selected manager and fixed service metadata. CLI start/stop requests use noninteractive systemctl only after owner/release/state/command identity checks; unavailable authorization returns exit 77 and browser HTTP 503 with console instructions. No privilege policy or sudo credential is added. Fixtures remain independent of installed services.
