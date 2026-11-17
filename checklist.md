@@ -4,13 +4,16 @@ Current scope: [college milestone](docs/college-milestone-plan.md), [ADR 0002](d
 
 Status: CLI and dashboard 0.1.0 are deployed on blue. Live status, preserved alert history, owner authentication and Host-Only access were verified on 2026-11-05; see [the diary](diary.md) and [earlier CLI verification](docs/verification/2026-11-04-cli-blue.md). Real red-to-blue threshold alerting, review reopening and manual console recovery after a monitor crash were verified on 2026-11-07 ([evidence](docs/verification/2026-11-07-red-blue-recovery.md)). Boot startup and bounded automatic systemd crash recovery were verified on blue ([service evidence](docs/verification/2026-11-07-systemd.md)). GitHub Issues are the implementation tracker; see the [build backlog](docs/build-backlog.md). Track actual contribution by both students.
 
-Progress reconciled on 2026-11-05 against [the diary](diary.md), [CLI/VM verification](docs/verification/2026-11-04-cli-blue.md), [dashboard verification](docs/verification/2026-11-05-dashboard.md) and [cleanup issue 14](https://github.com/BL47E/heimdall-home-security/issues/14). Planning checkboxes record agreed choices; implementation checkboxes identify their evidence below. The VM power, addresses and blue monitor status were rechecked live on 2026-11-05; see the diary. Earlier lab observations do not establish current state beyond that checkpoint.
+Latest live state: 99 events and two unchanged alerts after one new red-source password failure was ingested exactly once.
+
+Progress reconciled on 2026-11-17 against the [source checkpoint](docs/verification/2026-11-17-source.md) and [live deployment evidence](docs/verification/2026-11-17-deployment.md). Planning checkboxes record agreed choices; implementation checkboxes identify their evidence. GitHub decision tickets remain open until owner answers resolve them.
 
 ## Resume the lab
 
-- On 2026-11-07 both VMs were running: blue `10.37.129.3`, red `10.37.129.4`. The monitor now runs as an enabled systemd service; the dashboard remains manually started. Recheck status when resuming. [Runbook](docs/runbook.md)
-- The last verified dashboard address from the Mac was `http://10.37.129.3:8765`. The latest browser checks covered the sidebar at phone, tablet and desktop widths. [Deployment and sidebar evidence](diary.md)
-- Service installation, automatic crash recovery, retry limiting and startup after a real reboot passed on blue. Next lifecycle work is aligning CLI/browser controls with the service; use systemctl to manage the service meanwhile. Manual console monitor recovery passed; block-related recovery remains untested. The configuration validation follow-up is tracked separately below.
+- Blue remains at `10.37.129.3`; red at `10.37.129.4`. Both were observed running on November 17. Recheck addresses and service health when resuming.
+- Blue's deployed release is `/home/bl47eheim/heimdall/releases/0.1.0-ecaec12/heimdall-0.1.0`, launched through `~/heimdall/heimdall`. The monitor and cleanup timer are enabled; the dashboard was started manually at `http://10.37.129.3:8765`.
+- Service-aware CLI/browser controls are deployed. Existing Ubuntu policy denies unprivileged start/stop: the interface shows administrator console instructions and never starts a separate reader. Use `sudo systemctl start|stop|restart heimdall-monitor` in blue's terminal.
+- The daily cleanup timer is installed, has triggered, and the cleanup service completed successfully. State is backed up privately on blue. Blocking remains unimplemented and its recovery gate remains open.
 
 ## Panel design and repository cleanup — completed locally and saved
 
@@ -87,11 +90,12 @@ Acceptance: three failures do not alert, the fourth within the window does, expi
 - [x] Implement manual monitor start/stop, singleton prevention, cursor resume and readable failure state; verify live stop/start on blue and fake-journal crash scenarios locally.
 - [x] Provide a manual systemd template with bounded restart settings and runbook instructions; the resolved blue instance is now installed and boot-tested.
 - [x] Install and verify the reviewed systemd setup on blue, including boot startup and bounded recovery after a crash ([2026-11-07 service evidence](docs/verification/2026-11-07-systemd.md)).
-- [x] Align source CLI/browser monitor controls with the fixed systemd unit, identity checks and noninteractive authorization failure handling (local fake-manager and HTTP checks; not yet deployed on blue).
-- [ ] Deploy and verify service-aware CLI/browser controls on blue; the currently installed release still acts directly on the monitor process.
+- [x] Align source CLI/browser monitor controls with the fixed systemd unit, identity checks and noninteractive authorization failure handling (local fake-manager/HTTP checks and November 17 live deployment checks).
+- [x] Deploy and verify service-aware CLI/browser controls on blue, including real authorization denial without fallback and administrator stop/start with truthful status ([evidence](docs/verification/2026-11-17-deployment.md)).
 - [x] Implement explicit retention cleanup using configured days and preserving evidence referenced by retained alerts; default 60 days. Local cleanup now preserves pending Discord notifications and their evidence; active blocks remain unimplemented.
-- [x] Provide reviewed-shape daily cleanup service/timer source templates and disposable rendered-command checks; the timer is not installed on blue and Ubuntu unit verification remains open.
-- [ ] Implement daily 60-day retention while preserving pending notifications, active blocks and required supporting evidence.
+- [x] Provide daily cleanup service/timer templates, pass Ubuntu unit verification and install/enable them on blue; verify a timer trigger and successful service execution.
+- [x] Implement and activate daily 60-day retention, preserving pending notifications and required supporting evidence; synthetic tests cover expired records and pending deliveries.
+- [ ] Preserve active block records when enforcement state is designed and implemented; no blocks exist yet.
 
 Acceptance: background monitoring survives closing the launching terminal or browser; local records survive restart, and future delivery state must also survive. Review changes do not change firewall state. A stopped or failing monitor is never shown as healthy.
 

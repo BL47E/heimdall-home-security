@@ -1,5 +1,15 @@
 # Heimdall development diary
 
+## 2026-11-17 — Saved source checkpoint and deployed service controls/cleanup
+
+Verified the existing local service, retention and optional Discord implementation. Fixed the Discord flush concurrency failure by keeping each run bounded to its initial queue snapshot; the existing regression now passes. Updated the shell smoke test's obsolete provider expectation. Saved the source and earlier VM evidence in commit `ecaec12` on `codex/service-cleanup-deployment`. Mac tests: 65 passed, one Ubuntu-only skip; blue's checksum-verified package: all 66 passed, plus shell/configuration and 19 monitor scenarios. Ubuntu accepted the resolved units.
+
+Deployed a fresh `/home/bl47eheim/heimdall/releases/0.1.0-ecaec12/heimdall-0.1.0` release with the same owner and private state. Saved state/unit/launcher backups on blue, kept the old release, and switched the fixed monitor unit and owner launcher together. A first overly strict duplicate-reader verification assertion triggered a successful automatic code rollback; corrected the harness and repeated deployment. All 93 baseline events and both alerts/review histories were preserved.
+
+Verified real service identity and healthy coverage, denied CLI/API start/stop without process fallback, administrator console stop/start, truthful stopped status and refusal of a manual reader outside the service. Enabled daily cleanup and observed its timer trigger plus successful service execution; next observed run was November 18 at 00:05:11 IST. The dashboard was started manually on the existing Host-Only address. Browser start/stop still requires administrator console action under existing Ubuntu policy; no broader authorization was added.
+
+Used Computer Use for the blue/red consoles. The owner supplied console unlocks and administrator authentication. A temporary Python HTTP transfer on the existing Host-Only network avoided new packages, access credentials and network changes. Red sent one deliberate invalid-user password attempt with verified host checking; blue recorded the matching failure exactly once. Final state: 99 stored events, two unchanged alerts and healthy systemd coverage, with cleanup enabled and successful. See [full evidence](docs/verification/2026-11-17-deployment.md) for results and limits. This work does not establish either student's academic contribution, resolve faculty questions, enable real providers or implement blocking. No push or external message was sent.
+
 ## 2026-11-07 — Monitor boot startup and bounded automatic recovery
 
 Following the owner's administrator authorization, installed the reviewed resolved service on blue as a root-owned mode-644 unit, running the monitor as `bl47eheim`. Stopped the manual process before starting the service. Used existing journal permissions without adding a group or running Heimdall as root.
