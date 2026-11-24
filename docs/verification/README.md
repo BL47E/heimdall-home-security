@@ -4,6 +4,7 @@ Each file is a dated observation. Its statements about what was still planned ap
 
 | Record | What it establishes |
 | --- | --- |
+| [November 25 service switch](2026-11-25-service-switch.md) | All installed units and the launcher switched from the `vt` preview release to `0.1.0-342daa1`; control identity verified, state preserved. Explains the designed release-identity check. |
 | [November 25 release](2026-11-25-release-verification.md) | Updated CLI (`342daa1`: VirusTotal, terminal app, monitor-start fix) deployed as a fresh release on blue; all 82 tests pass on the VM. The service and launcher still run the older release. |
 | [November 17 Discord](2026-11-17-discord.md) | Current real delivery, controlled sender-only failure/recovery and automatic timer delivery. Latest recorded state: 136 events, three alerts, four notices delivered in three messages. |
 | [November 17 deployment](2026-11-17-deployment.md) | Source `ecaec12` deployed; service-aware CLI/API control checks, preserved state and enabled daily cleanup. Discord was not yet enabled at this earlier point that day. |
