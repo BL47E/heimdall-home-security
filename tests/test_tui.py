@@ -4,6 +4,7 @@ Every session runs the real `bin/heimdall tui` against disposable state
 directories. No live VM state, credentials or network is involved.
 """
 
+import codecs
 import fcntl
 import importlib.util
 import json
@@ -32,68 +33,94 @@ DOWN, UP, ESC, ENTER_KEY = "\x1b[B", "\x1b[A", "\x1b", "\r"
 class Screen:
     """A minimal terminal that reconstructs what the application actually shows.
 
-    Old ncurses carves updates into cursor-hopped fragments, so concatenated
-    output cannot be searched for text. This model replays cursor addressing,
-    line clears and printed cells, and exposes the visible screen as text.
+    ncurses carves updates into cursor-hopped fragments, so concatenated output
+    cannot be searched for text. This model decodes the UTF-8 stream, replays
+    cursor addressing, inserts/deletes/erases and printed cells, and exposes the
+    visible screen as text. Ubuntu's ncurses additionally uses vertical
+    position addressing (CSI d); both platforms stay readable here.
     """
 
     def __init__(self):
         self.cells = {}
         self.row = 0
         self.col = 0
+        self.last = " "
+        self.decoder = codecs.getincrementaldecoder("utf-8")("replace")
 
     def feed(self, data):
-        index = 0
-        size = len(data)
+        text = self.decoder.decode(data)
+        index, size = 0, len(text)
         while index < size:
-            byte = data[index]
-            if byte == 0x1B and index + 1 < size and data[index + 1] == ord("["):
+            char = text[index]
+            if char == "\x1b" and index + 1 < size and text[index + 1] == "[":
                 index += 2
-                params = bytearray()
-                while index < size and (0x30 <= data[index] <= 0x3F):
-                    params.append(data[index])
+                params = ""
+                while index < size and ("0" <= text[index] <= "?"):
+                    params += text[index]
                     index += 1
-                while index < size and (0x20 <= data[index] <= 0x2F):
+                while index < size and (" " <= text[index] <= "/"):
                     index += 1
                 if index >= size:
                     return
-                final = chr(data[index])
+                self.control(params, text[index])
                 index += 1
-                self.control(params.decode("ascii"), final)
-            elif byte == 0x1B and index + 1 < size and data[index + 1] == ord("]"):
-                end = data.find(b"\x07", index)
-                alt = data.find(b"\x1b\\", index)
-                if end == -1 and alt == -1:
+            elif char == "\x1b" and index + 1 < size and text[index + 1] == "]":
+                bell, escape = text.find("\x07", index), text.find("\x1b\\", index)
+                candidates = [end for end in (bell, escape) if end != -1]
+                if not candidates:
                     return
-                index = (min(x for x in (end, alt) if x != -1) + (1 if end != -1 and (alt == -1 or end < alt) else 2))
-            elif byte == 0x1B and index + 2 < size and data[index + 1] in (ord("("), ord(")")):
+                index = min(candidates) + (1 if min(candidates) == bell else 2)
+            elif char == "\x1b" and index + 2 < size and text[index + 1] in "()" and text[index + 2]:
                 index += 3
-            elif byte == 0x1B:
+            elif char == "\x1b":
                 index += 1
-            elif byte == 0x0D:
+            elif char == "\r":
                 self.col = 0
                 index += 1
-            elif byte == 0x0A:
+            elif char == "\n":
                 self.row += 1
                 index += 1
-            elif byte >= 0x20:
-                self.cells[(self.row, self.col)] = chr(byte)
+            elif char >= " ":
+                self.cells[(self.row, self.col)] = char
+                self.last = char
                 self.col += 1
                 index += 1
             else:
                 index += 1
 
     def control(self, params, final):
-        numbers = [int(part) if part else 0 for part in params.lstrip("?").split(";")]
+        private = params.startswith("?")
+        plain = params[1:] if private else params
+        numbers = [int(part) if part.isdigit() else 0 for part in plain.split(";")]
+
         def arg(position, default):
             return numbers[position] if position < len(numbers) and numbers[position] else default
-        if final == "H" or final == "f":
+
+        if final in ("H", "f"):
             self.row, self.col = max(0, arg(0, 1) - 1), max(0, arg(1, 1) - 1)
         elif final == "G":
             self.col = max(0, arg(0, 1) - 1)
+        elif final == "d":
+            self.row = max(0, arg(0, 1) - 1)
+        elif final == "A":
+            self.row = max(0, self.row - arg(0, 1))
+        elif final == "B":
+            self.row += arg(0, 1)
+        elif final == "C":
+            self.col += arg(0, 1)
+        elif final == "D":
+            self.col = max(0, self.col - arg(0, 1))
         elif final == "K":
-            for column in range(self.col, 200):
-                self.cells.pop((self.row, column), None)
+            mode = numbers[0] if numbers else 0
+            if mode == 1:
+                for column in range(0, self.col + 1):
+                    self.cells.pop((self.row, column), None)
+            elif mode == 2:
+                for column in range(0, 240):
+                    self.cells.pop((self.row, column), None)
+            else:
+                for column in range(self.col, 240):
+                    self.cells.pop((self.row, column), None)
         elif final == "J":
             mode = numbers[0] if numbers else 0
             if mode == 2:
@@ -102,9 +129,29 @@ class Screen:
                 for (row, column) in list(self.cells):
                     if row > self.row or (row == self.row and column >= self.col):
                         del self.cells[(row, column)]
-        elif final in "XP":
+        elif final == "X":
             for column in range(self.col, self.col + arg(0, 1)):
                 self.cells.pop((self.row, column), None)
+        elif final == "P":
+            width = arg(0, 1)
+            for column in range(self.col, 240 - width):
+                cell = self.cells.get((self.row, column + width))
+                if cell is None:
+                    self.cells.pop((self.row, column), None)
+                else:
+                    self.cells[(self.row, column)] = cell
+        elif final == "@":
+            width = arg(0, 1)
+            for column in range(239, self.col - 1, -1):
+                source = self.cells.get((self.row, column - width))
+                if source is None:
+                    self.cells.pop((self.row, column), None)
+                else:
+                    self.cells[(self.row, column)] = source
+        elif final == "b":
+            for _ in range(arg(0, 1)):
+                self.cells[(self.row, self.col)] = self.last
+                self.col += 1
 
     def text(self, rows=40, columns=200):
         lines = []
