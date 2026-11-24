@@ -1,0 +1,13 @@
+# Updated CLI release on blue — November 25, 2026
+
+The owner requested deploying the updated CLI to the monitored VM. Source commit `342daa1` on `TUI-implementation` (VirusTotal reputation, the refined terminal app, the monitor-start readiness fix and the test-harness UTF-8/cursor fix) was packaged with `scripts/package.sh`, transferred over SSH and deployed as a fresh release without touching the running service or live state.
+
+Archive SHA-256: `42d591c1e3b178e184ac67855363b13ad6dc0f36af20bcaaf3dac3517631fe0a`. Transfer used password authentication with the credential supplied through a private prompt; it never entered chat, commands, evidence or Git. Blue's ED25519 host key matched across its Shared (`10.211.55.9`) and Host-Only (`10.37.129.8`) interfaces (`SHA256:Isl197iNDEsBd2EmTLh687mWuPciPJLXbsRW0Ve333Q`). The checksum verified on the VM before extraction.
+
+Release: `/home/blazeblue/heimdall/releases/0.1.0-342daa1/heimdall-0.1.0`. An intermediate same-day directory (`0.1.0-dc2bf23`) was replaced by this final release; the earlier `0.1.0-ecaec12` and `0.1.0-vt` releases were retained.
+
+On the VM, `python3 -m unittest discover -s tests` ran all 82 tests with zero failures in 49.975 seconds — including the Ubuntu systemd unit-parser test that skips on macOS — plus shell state/configuration checks and 19 monitor scenarios. Disposable state only; no live records were modified. Noninteractive CLI checks passed: version, plain help as the default command, and the terminal app refusing to start without an interactive terminal.
+
+A first package (`dc2bf23`) had shown seven failing terminal tests on Ubuntu: the pseudo-terminal harness reconstructed the screen byte-by-byte, while Ubuntu's ncurses emits UTF-8 and vertical position addressing (`CSI d`). The fix (commit `342daa1`) changed only `tests/test_tui.py`; no runtime code changed between the two packages.
+
+Limits: the enabled `heimdall-monitor.service` still runs the `0.1.0-ecaec12` release, and the installed launcher still points there; `heimdall status` from the new release honestly reports the service manager as unavailable because the installed unit's identity belongs to the older release. Live status through the existing launcher reported the monitor running with available coverage. The terminal app was not driven interactively in the VM's graphical console this session; its pseudo-terminal tests exercised the VM's own python/ncurses stack instead. Switching the service or launcher to this release is a separate owner decision requiring an administrator console step. No firewall, network, account or provider change, no live VirusTotal lookup, and no merge to `main` accompanied this deployment.

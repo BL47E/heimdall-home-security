@@ -19,7 +19,7 @@ The deployed package passed all 66 Python tests on Ubuntu, plus shell/configurat
 
 Latest recorded VM state after Discord testing (November 17): blue `10.37.129.3`, red `10.37.129.4`; monitor PID 21431, running with available coverage; 136 stored events, three alerts. Monitor, daily cleanup and Discord sender timers were enabled. The HTTP dashboard was manually running at `http://10.37.129.3:8765`. These counts are dated observations from before the reset.
 
-November 25 SSH observation after the reset: blue (user `blazeblue`, Host-Only `10.37.129.8`) has releases `0.1.0-ecaec12` and `0.1.0-vt`, with `heimdall-monitor.service` enabled and active, the cleanup and Discord timers active, and `heimdall status` reporting the monitor running from `journalctl -u ssh` with no last error. Red (user `blazered`, Host-Only `10.37.129.9`) has no Heimdall deployment, as intended for the test source. The dashboard was not rechecked from the Mac this session.
+November 25 SSH observation after the reset: blue (user `blazeblue`, Host-Only `10.37.129.8`) has releases `0.1.0-ecaec12`, `0.1.0-vt` and `0.1.0-342daa1`, with `heimdall-monitor.service` enabled and active on the older release, the cleanup and Discord timers active, and `heimdall status` reporting the monitor running from `journalctl -u ssh` with no last error. The updated CLI release passed all 82 tests on the VM ([release evidence](verification/2026-11-25-release-verification.md)); the service and launcher switch awaits an owner decision. Red (user `blazered`, Host-Only `10.37.129.9`) has no Heimdall deployment, as intended for the test source. The dashboard was not rechecked from the Mac this session.
 
 ## Simulated and planned
 
