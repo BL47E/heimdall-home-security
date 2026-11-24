@@ -14,5 +14,7 @@ state/
 .runtime/
 web-token
 discord-webhook
+virustotal-key
+virustotal-cache.json
 .pytest_cache/
 dist/

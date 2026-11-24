@@ -4,7 +4,7 @@ Status: agreed planning direction, 2026-11-01, extended by the owner's 2026-11-0
 
 ## Current delivery checkpoint
 
-[November 17 Discord verification](verification/2026-11-17-discord.md) records four notices delivered in three messages, including real threshold/reopening alerts, grouped recovery after an injected sender-only failure, and timer-driven delivery. This is not evidence of a genuine Discord outage. The [deployment record](verification/2026-11-17-deployment.md) covers service-aware controls and retention; [earlier service evidence](verification/2026-11-07-systemd.md) covers real boot/crash tests. The dashboard still starts manually, and existing Ubuntu policy requires administrator console commands for monitor start/stop. VirusTotal, terminal menu, enforcement and the final academic submission remain unfinished.
+[November 17 Discord verification](verification/2026-11-17-discord.md) records four notices delivered in three messages, including real threshold/reopening alerts, grouped recovery after an injected sender-only failure, and timer-driven delivery. This is not evidence of a genuine Discord outage. The [deployment record](verification/2026-11-17-deployment.md) covers service-aware controls and retention; [earlier service evidence](verification/2026-11-07-systemd.md) covers real boot/crash tests. The dashboard still starts manually, and existing Ubuntu policy requires administrator console commands for monitor start/stop. VirusTotal is implemented in source for manual lookup and simulation. The terminal onboarding panel is implemented in source. Live lookup, enforcement and the final academic submission remain open.
 
 ## Goal and constraints
 
@@ -14,8 +14,8 @@ The owner supplied the 30-mark evaluation rubric and idea template on 2026-11-01
 
 ## Environment and architecture
 
-- MacBook M4 Air, 16 GB RAM, hosting two Ubuntu ARM64 VMs.
-- Heimdall VM: SSH service, shell-based monitor, local records, command interface and local browser dashboard. A TUI remains optional later work.
+- MacBook M4 Air, 16 GB RAM, hosting two Ubuntu ARM64 VMs. After the owner's November 25 laptop reset the lab identity is: UbuntuBlue (hostname `blueblue`, user `blazeblue`, Shared `10.211.55.9`, Host-Only `10.37.129.8`) and UbuntuRed (hostname `blazered`, user `blazered`, Shared `10.211.55.10`, Host-Only `10.37.129.9`). Earlier names and addresses in dated records are historical.
+- Heimdall VM: SSH service, shell-based monitor, local records, command interface and local browser dashboard. The terminal app is available in source via bare `heimdall` (or `heimdall tui`) in an interactive terminal, with first-run onboarding and a returning Overview workspace.
 - Test VM: controlled SSH attempts against the Heimdall VM over a private virtual network.
 - Shared adapters provide outbound routes; real Discord delivery from blue was verified. Host-Only adapters carry controlled SSH tests. Separate standalone reachability evidence for red remains open.
 - Shell is the main implementation language; jq handles JSON records and Python 3's standard library provides the HTTP bridge. This owner-requested addition is not evidence of faculty approval of permitted technologies. Parallels Desktop is selected; blue's observed SSH banner reports Ubuntu 26.04.1 LTS and the live source is `journalctl -u ssh` JSON. Record/recheck versions when resuming.
@@ -39,7 +39,7 @@ The owner supplied the 30-mark evaluation rubric and idea template on 2026-11-01
 
 ## VirusTotal context
 
-Optional and disabled until configured. Look up eligible, non-sensitive public IPs after an alert; never submit private addresses or full logs. Cache results and respect account quotas and rate limits. A timeout, missing key or exhausted quota means unknown reputation, not zero flags.
+Optional and disabled until configured. The owner explicitly requests a lookup after inspecting the alert and choosing an eligible, non-sensitive public IP to share. The provider receives the IP only. Heimdall rejects private and special-use addresses, caches results, and respects account quotas and rate limits. A timeout, missing key or exhausted quota produces an Unknown reputation label. See the [runbook](runbook.md#virustotal-ip-reputation).
 
 | Vendors flagging the IP | Reputation label |
 |---:|---|

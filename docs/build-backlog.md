@@ -10,9 +10,9 @@ The shell monitor/dashboard, service-aware controls, daily cleanup and real sche
 | --- | --- | --- |
 | Lab and fixtures (#1) | Two ARM64 VMs, SSH journal/exported examples and controlled red-to-blue input | Additional live window/concurrent-source/success scenarios and separate red outbound reachability evidence |
 | Parser/rules (#2) | Shell/jq rules, synthetic boundary tests and real threshold/reopening checks | Owner sign-off of event/time/replay contracts and remaining live scenarios |
-| History/service/dashboard (#3, #13) | Durable history, reports, authenticated panel, real boot/crash recovery, service controls and daily cleanup | Optional terminal menu, configuration-policy follow-up, later unattended retention evidence; browser lifecycle still requires administrator commands on blue |
+| History/service/dashboard (#3, #13) | Durable history, reports, authenticated panel, real boot/crash recovery, service controls and daily cleanup | Terminal panel deployment, configuration-policy follow-up, later unattended retention evidence; browser lifecycle still requires administrator commands on blue |
 | Discord (#4) | [Real delivery, controlled failure recovery and scheduled sender](verification/2026-11-17-discord.md) | Observe sender-timer startup after a new reboot; full final-demo rehearsal |
-| Reputation/reports (#5) | Local text reports | VirusTotal adapter/context and provider/action report extensions |
+| Reputation/reports (#5) | Manual VirusTotal lookup and offline simulation in source, with reputation in investigations and text reports | Live provider check and lab deployment if needed. Action report details depend on enforcement. |
 | Guided demo/response (#6) | Isolated labelled CLI demo | Full rehearsal; optional blocking design/approval/console-recovery gates |
 | College deliverables (#7) | Rubric/template mapping and dated evidence | Proposal/report, Gantt chart, balanced student contribution records, presentation and faculty answers |
 

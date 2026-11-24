@@ -31,7 +31,7 @@ If the owner account cannot read SSH's system journal, an administrator must rev
 
 The current application version is `0.1.0`. From its release directory, `./bin/heimdall help` lists the commands, `./bin/heimdall version` prints the version, and `./bin/heimdall demo` runs a labelled synthetic walkthrough without changing live state. The CLI prints JSON for machine-readable operations; pipe a result to `jq` when inspecting it. `config history` shows saved configuration changes.
 
-For the verified installation on blue, use `~/heimdall/heimdall help` or `~/heimdall/heimdall status` from any directory. This launcher now points to `/home/bl47eheim/heimdall/releases/0.1.0-ecaec12/heimdall-0.1.0`, deployed and verified on November 17 ([evidence](verification/2026-11-17-deployment.md)). The latest previous launcher is saved privately under `~/heimdall/evidence/2026-11-17/attempt2/heimdall-launcher.before`; the older `heimdall.before-dashboard` checkpoint is historical. The monitor is now managed by the enabled `heimdall-monitor.service` on blue. Check `systemctl status heimdall-monitor --no-pager` and `~/heimdall/heimdall status` after boot. Use `sudo systemctl start|stop|restart heimdall-monitor` to manage this installed service; the vertical bars mean choose one action. Browser/CLI controls now validate and address the fixed systemd unit. Existing Ubuntu authorization denies unprivileged start/stop, returning an administrator instruction instead of starting a separate process. Use the console systemctl commands for actual lifecycle changes on blue.
+For the verified installation on blue, use `~/heimdall/heimdall help` or `~/heimdall/heimdall status` from any directory. This launcher now points to `/home/bl47eheim/heimdall/releases/0.1.0-ecaec12/heimdall-0.1.0`, deployed and verified on November 17 ([evidence](verification/2026-11-17-deployment.md)). After the November 25 lab rename the account is `blazeblue`, so that release tree now lives under `/home/blazeblue/heimdall`; a newer `0.1.0-vt` release was also observed there. The latest previous launcher is saved privately under `~/heimdall/evidence/2026-11-17/attempt2/heimdall-launcher.before`; the older `heimdall.before-dashboard` checkpoint is historical. The monitor is now managed by the enabled `heimdall-monitor.service` on blue. Check `systemctl status heimdall-monitor --no-pager` and `~/heimdall/heimdall status` after boot. Use `sudo systemctl start|stop|restart heimdall-monitor` to manage this installed service; the vertical bars mean choose one action. Browser/CLI controls now validate and address the fixed systemd unit. Existing Ubuntu authorization denies unprivileged start/stop, returning an administrator instruction instead of starting a separate process. Use the console systemctl commands for actual lifecycle changes on blue.
 
 For a new standalone setup with no installed monitor service, enter its release directory and run these commands. On blue's existing service-managed installation, use the administrator systemctl commands above instead of standalone startup:
 
@@ -67,6 +67,20 @@ An alert's review status records the owner's investigation progress. New failure
 On a standalone installation, stop the background reader with `./bin/heimdall monitor stop`. With a matching installed unit, start/stop addresses systemd and may require administrator console action. Foreground `./bin/heimdall monitor run` is owned by that service and cannot be used to bypass it.
 
 Transaction and monitor locks use an operating-system advisory lock through a small Python standard-library helper. A process crash releases its lock automatically; the next monitor owns and cleans only its known scratch files. Keep `.transaction.lock` and `.monitor.lock` in place while any Heimdall process runs. Never remove locks to bypass an active writer. Mock crash/restart tests establish local behavior. Real blue service crash recovery, retry limiting and boot startup are recorded in [service evidence](verification/2026-11-07-systemd.md).
+
+## Terminal panel and onboarding
+
+Run `./bin/heimdall` with no arguments in an interactive terminal to open the Heimdall terminal app; `./bin/heimdall tui` is the explicit form. Noninteractive invocations (scripts, pipes) still print plain help. On Blue, the installed launcher opens the app once a release containing it is installed. Use a regular login and a terminal with Python curses support and at least 48 columns by 14 rows. The palette uses a genuine black background with light text and one cyan accent; the first line always shows monitor state, coverage and alert counts.
+
+The first launch in each state directory opens guided onboarding: a welcome, a prerequisites and SSH journal check, and local state preparation. An existing state directory — such as Blue's — is adopted unchanged; nothing is reset and no history, reviews or provider configuration are touched. Finish in **local mode** for live SSH monitoring or **offline mode** to start with the labelled demo. Completion is saved explicitly in a private `tui.json` record; later launches open the regular workspace, and Setup remains available for rechecks. Opening the panel never modifies accounts, groups, network, firewall or services.
+
+- **Overview** is the working home: monitor status and start/stop, each alert with its investigation and review/reopen, recent events, rule settings and provider summary, plus access to Setup and Demo.
+- Press **1–4** or **Tab** to switch pages, **Up/Down** to select, **Enter** to open, **r** to refresh. In detail panels, **Up/Down** scrolls, **Esc** returns, and **y** confirms or reviews where a footer says so.
+- Type **/** to open the persistent command bar. Commands: `/overview`, `/setup`, `/providers`, `/demo`, `/refresh`, `/config {"threshold":5}` (confirmed before applying), `/help`.
+- Leaving during normal use requires the exact command **`/exit`**. Neither **q** nor **Esc** exits; Esc cancels the command bar, returns from details or steps back in onboarding. Ctrl+C also interrupts the process and restores the terminal.
+- In **Setup**, check the required tools and initialize local state. Open **SSH journal** for the read-access check and the administrator's permission review steps. **Providers** accepts optional Discord and VirusTotal credentials through hidden input; saving a Discord webhook and enabling delivery are separate actions. **Demo** runs the synthetic walkthrough in separate state.
+
+The panel shows installer and permission commands for review in the VM console. Run approved administrator commands there, then return to Setup and press **r** to check access again.
 
 ## Packaging a build for the VM
 
@@ -106,7 +120,7 @@ Loopback (`127.0.0.1`) accepts only browsers on blue. To use a browser on the Ma
 ip -br address
 ```
 
-For Mac-to-blue access, use the current Host-Only address when available. The verified Mac URL was `http://10.37.129.3:8765/overview`. After booting blue, start the dashboard manually from the deployed release directory using the command below. Historical addresses in the diary may have changed. Stop the loopback server with Ctrl+C, then bind to the chosen address explicitly; replace `BLUE_LOCAL_IP` with that address:
+For Mac-to-blue access, use the current Host-Only address when available: after the owner's laptop reset this is `10.37.129.8` (observed November 25), so the dashboard URL is `http://10.37.129.8:8765/overview`. Earlier verified addresses in the diary are historical. After booting blue, start the dashboard manually from the deployed release directory using the command below. Stop the loopback server with Ctrl+C, then bind to the chosen address explicitly; replace `BLUE_LOCAL_IP` with that address:
 
 ```sh
 python3 web/server.py --host BLUE_LOCAL_IP --port 8765
@@ -150,7 +164,7 @@ Record exact checks and outcomes with the implementation issue. At minimum, veri
 
 ## November 17 deployment recovery
 
-Blue's private backups are under `~/heimdall/evidence/2026-11-17/` and `attempt2/`: previous unit and launcher, plus `state-before.json` and a full private state archive. Keep them private because the archive includes authentication material. The old release remains at `/home/bl47eheim/heimdall/releases/0.1.0.lzc7GK/heimdall-0.1.0`. The current release is identified by its source commit and archive checksum in the deployment evidence, even though both releases report application version 0.1.0.
+Blue's private backups are under `~/heimdall/evidence/2026-11-17/` and `attempt2/`: previous unit and launcher, plus `state-before.json` and a full private state archive. Keep them private because the archive includes authentication material. The old release remains in the `releases/0.1.0.lzc7GK/heimdall-0.1.0` directory, which moved to `/home/blazeblue/heimdall` with the November 25 account rename. The current release is identified by its source commit and archive checksum in the deployment evidence, even though both releases report application version 0.1.0.
 
 To stop daily scheduling without deleting history, run `sudo systemctl disable --now heimdall-cleanup.timer` in blue's terminal. `systemctl list-timers heimdall-cleanup.timer --no-pager` shows its next trigger. `systemctl show heimdall-cleanup.service -p Result -p ExecMainStatus` shows the latest cleanup result. The current service runs daily with up to fifteen minutes of randomized delay and one catch-up after downtime; active-block retention remains future work.
 
@@ -182,3 +196,27 @@ PYTHON
 ```
 
 Configuration starts disabled; inspect status and explicitly enable after checking the destination. The private `~/.local/state/heimdall/discord-webhook` file must remain mode 0600 and must not enter Git, reports or screenshots. Correct a deleted/rejected destination through configuration; repeatedly flushing it will not repair its credentials. A timer exit status of zero alone does not prove delivery—also inspect provider status and pending work.
+
+## VirusTotal IP reputation
+
+From the repository root, run `./bin/heimdall demo` to see a labelled, simulated result on the private lab IP. The demo uses a separate state directory and works without an account or internet connection.
+
+For a live lookup, use the checkout or release containing VirusTotal support. In its repository or release directory, run the following from your terminal to save your key through a hidden prompt. A configured key enables manual lookups for that state directory. [VirusTotal authentication](https://docs.virustotal.com/reference/authentication)
+
+```sh
+python3 - <<'PYTHON'
+import getpass
+import subprocess
+subprocess.run(
+    ["./bin/heimdall", "virustotal", "configure"],
+    input=getpass.getpass("VirusTotal API key (hidden): ") + "\n",
+    text=True, check=True,
+)
+PYTHON
+```
+
+Run `./bin/heimdall alerts` to find the alert ID and review its source IP. For a public IP you are authorized to share, run `./bin/heimdall virustotal lookup ALERT_ID`, replacing `ALERT_ID` with the saved alert's ID. VirusTotal may add a queried IP to its dataset. Choose only non-sensitive indicators. Heimdall sends the selected IP with the API key in the authentication header. [IP report and data sharing](https://docs.virustotal.com/reference/ip-info)
+
+The result appears in Investigations and `./bin/heimdall report ALERT_ID`. The reputation label uses the sum of malicious and suspicious vendor results. Ten or more flags raise the alert severity to High. An unavailable lookup appears as Unknown. Successful lookups are reused for 24 hours. Heimdall limits its requests to four per minute and 500 per rolling day per state directory. VirusTotal applies account limits across clients. [Public API quotas](https://docs.virustotal.com/reference/public-vs-premium-api)
+
+`./bin/heimdall virustotal status` checks local key setup. `./bin/heimdall virustotal disable` removes the private key and preserves alert evidence. The credential is stored as `virustotal-key` in the private Heimdall state directory with mode 0600.

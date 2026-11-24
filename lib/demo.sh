@@ -11,13 +11,17 @@ printf 'Separate demonstration state: %s\n\n' "$HEIMDALL_DATA_DIR"
 head -n 3 "$ROOT/tests/fixtures/password-burst.jsonl" | "$CLI" ingest - >/dev/null
 printf 'After three failures: %s alerts (expected 0).\n' "$("$CLI" alerts | jq length)"
 sed -n '4p' "$ROOT/tests/fixtures/password-burst.jsonl" | "$CLI" ingest - >/dev/null
-printf 'After the fourth: %s alert (expected 1).\n' "$("$CLI" alerts | jq length)"
-id=$("$CLI" alerts | jq -r '.[0].id')
+alerts=$("$CLI" alerts)
+printf 'After the fourth: %s alert (expected 1), severity %s.\n' \
+  "$(printf '%s\n' "$alerts" | jq length)" "$(printf '%s\n' "$alerts" | jq -r '.[0].severity')"
+id=$(printf '%s\n' "$alerts" | jq -r '.[0].id')
 "$CLI" review "$id" >/dev/null
 printf '%s\n' 'Owner review recorded. No access restrictions were changed.'
 sed -n '5p' "$ROOT/tests/fixtures/password-burst.jsonl" | "$CLI" ingest - >/dev/null
 printf 'Following successful login: %s preceding matching failures in these samples.\n' "$("$CLI" events | jq '.[0].preceding_failures')"
 head -n 1 "$ROOT/tests/fixtures/password-burst.jsonl" | jq -c '.__CURSOR="synthetic:demo:6" | .__REALTIME_TIMESTAMP="1793790120000000"' | "$CLI" ingest - >/dev/null
 printf 'New failure reopens the active alert: %s.\n' "$("$CLI" inspect "$id" | jq -r '.review_status')"
+printf '%s\n' 'Applying a simulated VirusTotal result with 10 flagging vendors.'
+"$CLI" virustotal simulate "$id" 10 >/dev/null
 "$CLI" report "$id"
 printf '\nSynthetic data is retained only in %s\n' "$HEIMDALL_DATA_DIR"

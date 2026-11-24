@@ -27,6 +27,16 @@ for (const a of document.querySelectorAll('nav a'))
   if (a.getAttribute('href') === '/' + page)
     a.setAttribute('aria-current', 'page');
 const label = (s) => (s === 'needs_review' ? 'Needs review' : 'Reviewed');
+const providerState = (state) => ({
+  disabled: 'disabled',
+  configured: 'configured',
+  needs_configuration: 'needs configuration',
+  fixture_destination_mismatch: 'requires a test destination',
+  rate_limited: 'rate limited',
+  delivery_error: 'delivery error',
+  pending: 'pending delivery',
+  delivered: 'delivered'
+})[state] || 'unknown';
 function notice(s) {
   $('message').textContent = s;
 }
@@ -68,6 +78,7 @@ function showLogin(message = '') {
   $('status').textContent = '';
   $('monitor-badge').textContent = 'Unknown';
   $('mode-label').textContent = 'Checking source';
+  $('provider-label').textContent = '';
   $('freshness').textContent = 'Waiting for status';
   $('token').value = '';
   notice(message);
@@ -166,8 +177,24 @@ async function inspect(id) {
       node('p', a.explanation),
       node('p', a.recommendation),
       node('p', date(a.first_seen) + ' – ' + date(a.last_seen)),
-      node('h3', 'Evidence timeline')
+      node('h3', 'VirusTotal reputation')
     );
+    const reputation = a.reputation;
+    if (reputation) {
+      const provenance = reputation.provenance === 'simulated'
+        ? ' / Simulated'
+        : reputation.from_cache ? ' / Cached' : '';
+      d.append(node('p', reputation.label + provenance + ' / Checked ' + date(reputation.checked_at)));
+      d.append(node('p', reputation.flags === null
+        ? reputation.reason
+        : `${reputation.flags} flagging vendors (malicious or suspicious)`));
+      if (reputation.flags >= 10) {
+        d.append(node('p', 'Severity raised to High because at least 10 vendors flagged the IP.'));
+      }
+    } else {
+      d.append(node('p', 'Unknown / No lookup recorded'));
+    }
+    d.append(node('h3', 'Evidence timeline'));
     for (const e of a.events || []) {
       const item = node('div', '', 'timeline-item');
       item.append(
@@ -259,6 +286,8 @@ async function refresh() {
         s.mode === 'fixture'
           ? 'Synthetic samples / no live coverage'
           : 'SSH journal / ' + s.monitor.coverage + ' coverage';
+      $('provider-label').textContent =
+        'Discord ' + providerState(s.providers.discord) + ' / VirusTotal ' + providerState(s.providers.virustotal);
       $('freshness').textContent = 'Updated ' + new Date().toLocaleTimeString();
     } else if (page === 'investigations') {
       const latest = await api('/api/alerts');

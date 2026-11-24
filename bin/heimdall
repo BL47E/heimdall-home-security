@@ -3,15 +3,22 @@
 set -eu
 umask 077
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
+# Without arguments in an interactive terminal, open the terminal application.
+# Noninteractive invocations keep plain help as the default command.
+if [ $# -eq 0 ] && [ -t 0 ] && [ -t 1 ]; then
+  set -- tui
+fi
 case "${1:-help}" in
   help | --help | -h)
     cat <<'HELP'
 Heimdall — explainable local SSH monitoring
 
-Usage: ./bin/heimdall COMMAND
+Usage: ./bin/heimdall [COMMAND]
 
-  help                        Show this guide (also the default command)
+  (no command)                Interactive terminal: open the Heimdall terminal app
+  help                        Show this guide (the noninteractive default)
   version                     Show the software version
+  tui                         Open the terminal app explicitly (same as no command)
   init                        Create private local state
   status                      Show monitor health and alert counts as JSON
   monitor start|stop|run       Control background monitoring, or run foreground
@@ -27,14 +34,19 @@ Usage: ./bin/heimdall COMMAND
   cleanup                     Apply configured retention to local records
   discord COMMAND             Configure optional delivery, enable/disable,
                               inspect status or flush pending work
+  virustotal configure        Save an optional API key through stdin
+  virustotal disable|status   Remove the key or show local setup status
+  virustotal lookup ID        Look up and store an eligible journal alert's IP
+  virustotal simulate ID N    Store a labelled vendor count on a fixture alert
   demo                        Run a labelled synthetic demo in separate state
 
 Defaults: four failures from one IP within 300 seconds; 60-day retention.
 State: HEIMDALL_DATA_DIR, or ~/.local/state/heimdall (XDG_STATE_HOME supported).
 Requires Bash, jq and Python 3. Live monitoring also requires Ubuntu journalctl.
 Example: ./bin/heimdall config set '{"threshold":4,"window_seconds":300}'
-Review changes do not change SSH access. Blocking and reputation remain planned.
+Review changes do not change SSH access. Blocking remains planned.
 Discord starts disabled; configure its private destination through stdin.
+VirusTotal sends the eligible source IP only when you explicitly request a lookup.
 See docs/runbook.md for dashboard login and Ubuntu setup.
 HELP
     exit 0
@@ -50,6 +62,11 @@ err() {
   printf '%s\n' "$*" >&2
   exit 1
 }
+if [ "${1:-}" = tui ]; then
+  [ "$#" = 1 ] || err 'Usage: tui'
+  command -v python3 >/dev/null 2>&1 || err 'Python 3 is required for the terminal panel'
+  exec python3 "$ROOT/lib/tui.py" "$ROOT/bin/heimdall" "$DATA"
+fi
 command -v jq >/dev/null 2>&1 || err 'jq is required'
 command -v python3 >/dev/null 2>&1 || err 'python3 is required for address validation'
 if [ "${1:-}" = demo ]; then
@@ -96,6 +113,31 @@ if [ "${1:-}" = discord ]; then
   discord_command "$@"
   exit
 fi
+# Serialize provider operations separately so SSH ingestion continues during a lookup.
+if [ "${1:-}" = virustotal ]; then
+  action=${2:-}
+  case "$action:$#" in
+    status:2|configure:2|disable:2|lookup:3|simulate:4) ;;
+    *) err 'Usage: virustotal configure|disable|status|lookup ID|simulate ID COUNT' ;;
+  esac
+  if [ "$action" != status ] && [ "${HEIMDALL_VIRUSTOTAL_LOCK_PID:-}" != "$$" ]; then
+    exec python3 "$ROOT/lib/lock.py" "$DATA/.virustotal.lock" HEIMDALL_VIRUSTOTAL_LOCK_PID 5 "$ROOT/bin/heimdall" "$@"
+  fi
+  case "$action" in
+    lookup|simulate)
+      [ -f "$STATE" ] || err 'Unknown alert ID'
+      target=$(jq -ce --arg id "$3" '.mode as $mode | .alerts[] | select(.id == $id) | {mode:($mode // "live"),source_ip,provenance}' "$STATE") || err 'Unknown alert ID'
+      result=$(printf '%s\n' "$target" | python3 "$ROOT/lib/virustotal.py" "$DATA" "$action" "${4:-}")
+      "$ROOT/bin/heimdall" _virustotal_update "$3" <<<"$result"
+      ;;
+    status)
+      provider_state=$(python3 "$ROOT/lib/virustotal.py" "$DATA" status)
+      printf '%s\n' "$provider_state" | jq '{provider_state:.}'
+      ;;
+    *) python3 "$ROOT/lib/virustotal.py" "$DATA" "$action" ;;
+  esac
+  exit
+fi
 if [ "${HEIMDALL_TRANSACTION_LOCK_PID:-}" != "$$" ]; then
   exec python3 "$ROOT/lib/lock.py" "$DATA/.transaction.lock" HEIMDALL_TRANSACTION_LOCK_PID 5 "$ROOT/bin/heimdall" "$@"
 fi
@@ -109,6 +151,19 @@ case "$cmd" in
   _discord)
     . "$ROOT/lib/discord_state.sh"
     discord_state_command "$@"
+    ;;
+  _virustotal_update)
+    [ "$#" = 1 ] && [ "${HEIMDALL_VIRUSTOTAL_LOCK_PID:-}" = "$PPID" ] || err 'Expected a VirusTotal result from the lookup operation'
+    result=$(jq -e --arg id "$1" --slurpfile received /dev/stdin '
+      $received[0] as $lookup | (.mode // "live") as $mode |
+      if any(.alerts[]; .id == $id and {mode:$mode,source_ip,provenance} == $lookup.target) then
+        .alerts |= map(if .id == $id then .reputation = $lookup.reputation |
+          .severity = (if (.reputation.flags // 0) >= 10 then "HIGH" else "MEDIUM" end)
+        else . end)
+      else error("The alert changed or expired during the lookup") end
+    ' "$STATE")
+    printf '%s\n' "$result" | save
+    jq --arg id "$1" '.alerts[] | select(.id == $id) | {id,source_ip,severity,reputation}' "$STATE"
     ;;
   init)
     [ "$#" = 0 ] || err 'Usage: init'
@@ -124,7 +179,8 @@ case "$cmd" in
     alive=false
     pid=$(jq -r '.monitor.pid // empty' "$STATE")
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && ps -p "$pid" -o command= | grep -F "$ROOT/bin/heimdall monitor run" >/dev/null; then alive=true; fi
-    jq -L "$ROOT/lib" --argjson now "$(date +%s)" --argjson service "$manager_info" --argjson alive "$alive" 'include "notifications"; {monitor:((.monitor // {state:"stopped",pid:null,source:"journalctl -u ssh",last_event_at:null,last_error:null,coverage:"unavailable"}) | if $alive then . else .coverage="unavailable" | .pid=null | if .state=="running" then .state="error" | .last_error="Monitor process exited; coverage unavailable" else . end end | .manager=$service.manager | .service=$service | if $service.manager=="unavailable" then .state="error" | .coverage="unavailable" | .last_error=$service.error elif $service.manager=="systemd" and ($service.active_state!="active" or $service.main_pid!=.pid) then .coverage="unavailable" | .pid=null | .state=(if $service.active_state=="inactive" then "stopped" else "error" end) | .last_error=(if $service.active_state=="inactive" then null else "Monitor service is not active with the recorded process; inspect systemctl status heimdall-monitor.service" end) else . end),counts:{events:(.events|length),alerts:(.alerts|length),needs_review:([.alerts[]|select(.review_status == "needs_review")]|length)},providers:{discord:(discord_summary($now).provider_state),virustotal:"not_implemented"},discord:discord_summary($now),mode:(.mode // "live"),config:.config}' "$STATE"
+    virustotal_status=$(python3 "$ROOT/lib/virustotal.py" "$DATA" status)
+    jq -L "$ROOT/lib" --argjson now "$(date +%s)" --argjson service "$manager_info" --argjson alive "$alive" --argjson virustotal "$virustotal_status" 'include "notifications"; {monitor:((.monitor // {state:"stopped",pid:null,source:"journalctl -u ssh",last_event_at:null,last_error:null,coverage:"unavailable"}) | if $alive then . else .coverage="unavailable" | .pid=null | if .state=="running" then .state="error" | .last_error="Monitor process exited; coverage unavailable" else . end end | .manager=$service.manager | .service=$service | if $service.manager=="unavailable" then .state="error" | .coverage="unavailable" | .last_error=$service.error elif $service.manager=="systemd" and ($service.active_state!="active" or $service.main_pid!=.pid) then .coverage="unavailable" | .pid=null | .state=(if $service.active_state=="inactive" then "stopped" else "error" end) | .last_error=(if $service.active_state=="inactive" then null else "Monitor service is not active with the recorded process; inspect systemctl status heimdall-monitor.service" end) else . end),counts:{events:(.events|length),alerts:(.alerts|length),needs_review:([.alerts[]|select(.review_status == "needs_review")]|length)},providers:{discord:(discord_summary($now).provider_state),virustotal:$virustotal},discord:discord_summary($now),mode:(.mode // "live"),config:.config}' "$STATE"
     ;;
   alerts)
     [ "$#" = 0 ] || err 'Usage: alerts'
@@ -169,7 +225,15 @@ case "$cmd" in
     fi
     record=$(jq --arg id "$id" '. as $state | .alerts[] | select(.id == $id) | .events = [.event_ids[] as $eid | $state.events[] | select(.id == $eid)]' "$STATE")
     if [ "$cmd" = report ]; then
-      printf '%s\n' "$record" | jq -r '"Heimdall investigation \(.id)\nSource: \(.source_ip)\nSeverity: \(.severity)\nReview: \(.review_status)\nProvenance: \(.provenance)\n\(.explanation)\n\(.recommendation)\n\nEvidence:\n", (.events[] | "\(.timestamp // "unknown") | \(.username // "unknown") | \(.message)"), "\nReview history:", (.review_history[] | "\(.timestamp) | \(.status) | \(.reason)")'
+      printf '%s\n' "$record" | jq -r '
+        "Heimdall investigation \(.id)\nSource: \(.source_ip)\nSeverity: \(.severity)\nReview: \(.review_status)\nProvenance: \(.provenance)\n\(.explanation)\n\(.recommendation)",
+        (if .reputation then .reputation |
+          "\nVirusTotal reputation: \(.label)\(if .provenance == "simulated" then " (simulated)" elif .from_cache then " (cached)" else "" end)\nChecked: \(.checked_at | todateiso8601)",
+          (if .flags == null then .reason else "Flagging vendors (malicious or suspicious): \(.flags)" end),
+          (if (.flags // 0) >= 10 then "Severity raised to HIGH because at least 10 vendors flagged the IP." else empty end)
+        else "\nVirusTotal reputation: Unknown (no lookup recorded)" end),
+        "\nEvidence:\n", (.events[] | "\(.timestamp // "unknown") | \(.username // "unknown") | \(.message)"),
+        "\nReview history:", (.review_history[] | "\(.timestamp) | \(.status) | \(.reason)")'
     else printf '%s\n' "$record"; fi
     ;;
   ingest | _journal_ingest)
@@ -220,5 +284,5 @@ case "$cmd" in
     after=$(jq '.events|length' "$STATE")
     jq -n --argjson removed "$((before - after))" '{events_removed:$removed}'
     ;;
-  *) err 'Usage: heimdall init|status|alerts|events|inspect|review|reopen|config|ingest|monitor|report|cleanup|discord' ;;
+  *) err 'Usage: heimdall init|status|alerts|events|inspect|review|reopen|config|ingest|monitor|report|cleanup|discord|virustotal' ;;
 esac

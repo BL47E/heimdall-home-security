@@ -87,16 +87,20 @@ def clean(value, maximum):
 
 def build_message(items):
     header = 'Heimdall SSH findings (grouped local notifications)\n'
-    footer = '\nReputation: unavailable (not implemented). SSH blocking: not implemented. Review local evidence.'
+    footer = '\nReview local evidence. SSH blocking: not implemented.'
     content = header
     ids = []
     for item in items:
         alert = item.get('alert', {})
         provenance = 'synthetic fixture' if alert.get('provenance') == 'fixture' else clean(alert.get('provenance'), 24)
+        reputation = alert.get('reputation') or {}
+        reputation_label = clean(reputation.get('label', 'Unknown'), 24)
+        if reputation.get('provenance') == 'simulated':
+            reputation_label += ' (simulated)'
         line = (f"- {clean(alert.get('id'), 64)} [{provenance}; {clean(item.get('reason'), 16)}] "
                 f"time={clean(item.get('created_at'), 24)} source={clean(alert.get('source_ip'), 48)} "
                 f"failures={clean(alert.get('failure_count'), 12)} severity={clean(alert.get('severity'), 16)}: "
-                f"{clean(alert.get('explanation'), 320)}\n")
+                f"{clean(alert.get('explanation'), 320)} VirusTotal: {reputation_label}.\n")
         if len(content + line + footer) > LIMIT:
             break
         content += line

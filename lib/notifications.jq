@@ -50,7 +50,7 @@ def discord_snapshot($now):
         ($state.alerts[] | select(.id == $notice.alert_id)) as $alert |
         {id:$notice.id, reason:$notice.reason, created_at:$notice.created_at,
          attempts:$notice.attempts,
-         alert:($alert | {id,source_ip,failure_count,severity,explanation,provenance,last_seen})}
+         alert:($alert | {id,source_ip,failure_count,severity,explanation,provenance,last_seen,reputation})}
       ] | sort_by(.created_at, .id) | .[:100]
     else [] end)};
 

@@ -101,11 +101,19 @@ class WebTest(unittest.TestCase):
         alerts = json.loads(body)
         self.assertEqual(len(alerts), 1)
         alert_id = alerts[0]["id"]
+        subprocess.run(
+            [str(ROOT / "bin/heimdall"), "virustotal", "simulate", alert_id, "10"],
+            env={**os.environ, "HEIMDALL_DATA_DIR": str(self.data)},
+            capture_output=True, check=True,
+        )
         status, _, body = self.request(
             "GET", "/api/alerts/" + alert_id, headers=headers
         )
         self.assertEqual(status, 200)
-        self.assertGreaterEqual(len(json.loads(body)["events"]), 4)
+        detail = json.loads(body)
+        self.assertGreaterEqual(len(detail["events"]), 4)
+        self.assertEqual(detail["reputation"]["provenance"], "simulated")
+        self.assertEqual(detail["severity"], "HIGH")
         for action, expected in [("review", "reviewed"), ("reopen", "needs_review")]:
             status, _, body = self.request(
                 "POST", f"/api/alerts/{alert_id}/{action}", "{}", headers
@@ -119,6 +127,7 @@ class WebTest(unittest.TestCase):
         self.assertIn("attachment", response_headers["Content-Disposition"])
         self.assertIn(b"Heimdall investigation", body)
         self.assertIn(b"fixture", body)
+        self.assertIn(b"Very high concern (simulated)", body)
         status, _, body = self.request("GET", "/api/events", headers=headers)
         self.assertEqual(status, 200)
         self.assertGreaterEqual(len(json.loads(body)), 4)

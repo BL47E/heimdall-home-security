@@ -10,10 +10,11 @@ Progress reconciled on 2026-11-17 against the [source checkpoint](docs/verificat
 
 ## Resume the lab
 
-- Blue remains at `10.37.129.3`; red at `10.37.129.4`. Both were observed running on November 17. Recheck addresses and service health when resuming.
-- Blue's deployed release is `/home/bl47eheim/heimdall/releases/0.1.0-ecaec12/heimdall-0.1.0`, launched through `~/heimdall/heimdall`. The monitor, cleanup timer and Discord sender timer are enabled; the dashboard was started manually at `http://10.37.129.3:8765`.
+Lab identity after the owner's laptop reset (observed over SSH on November 25): the VMs are now UbuntuBlue (hostname `blueblue`, user `blazeblue`) and UbuntuRed (hostname `blazered`, user `blazered`). Blue is at `10.211.55.9` (Shared) and `10.37.129.8` (Host-Only); red at `10.211.55.10` (Shared) and `10.37.129.9` (Host-Only). The pre-reset addresses in older diary/evidence records no longer respond; historical entries keep their original values.
+- Blue's Heimdall survived the account rename: releases `0.1.0-ecaec12` and `0.1.0-vt` exist under `/home/blazeblue/heimdall`, `heimdall-monitor.service` is enabled and active, and the cleanup and Discord sender timers are active. `heimdall status` reported the monitor running from `journalctl -u ssh` with no last error. The dashboard was not rechecked from the Mac this session.
 - Service-aware CLI/browser controls are deployed. Existing Ubuntu policy denies unprivileged start/stop: the interface shows administrator console instructions and never starts a separate reader. Use `sudo systemctl start|stop|restart heimdall-monitor` in blue's terminal.
 - The daily cleanup timer is installed, has triggered, and the cleanup service completed successfully. State is backed up privately on blue. Blocking remains unimplemented and its recovery gate remains open.
+- Per the owner's request on November 25, both VMs disable idle screen locking (`idle-delay 0`) and idle suspend; the screen asks for a password only at explicit logout/login or a manual lock.
 
 ## Panel design and repository cleanup — completed locally and saved
 
@@ -86,7 +87,7 @@ Acceptance: three failures do not alert, the fourth within the window does, expi
 - [x] Implement restricted local storage, atomic updates and OS advisory locking; Ubuntu tests exercise crash recovery, and live stop/start preserves journal state. Boot recovery is recorded in the service checks below.
 - [x] Add alert listing, inspection, review/reopen, review history and simple readable report output (local CLI/HTTP tests).
 - [x] Reopen a reviewed active alert on new failures; a later burst becomes a new alert (synthetic tests).
-- [x] Add shared CLI/browser operations and honest monitoring/provider status (real HTTP-to-CLI tests); optional TUI remains planned.
+- [x] Add shared CLI/browser operations and honest monitoring/provider status (real HTTP-to-CLI tests); the terminal app (bare `heimdall`, onboarding, Overview workspace, exact `/exit`) is implemented in source with pseudo-terminal tests.
 - [x] Implement manual monitor start/stop, singleton prevention, cursor resume and readable failure state; verify live stop/start on blue and fake-journal crash scenarios locally.
 - [x] Provide a manual systemd template with bounded restart settings and runbook instructions; the resolved blue instance is now installed and boot-tested.
 - [x] Install and verify the reviewed systemd setup on blue, including boot startup and bounded recovery after a crash ([2026-11-07 service evidence](docs/verification/2026-11-07-systemd.md)).
@@ -115,11 +116,12 @@ Acceptance: provider failure does not lose alerts or stop local monitoring; the 
 
 ## 5. Reputation and reports — Day 7
 
-- [ ] Add optional public-IP eligibility, simulated VirusTotal adapter, caching, quotas, timeouts and unknown-state handling.
-- [ ] Implement the agreed vendor-count labels and separate SSH alert severity.
-- [ ] Never submit private/sensitive indicators or raw logs. Clearly label mock responses.
+- [x] Add manual VirusTotal lookup for eligible public IPs, offline simulation, caching, quotas, timeouts and unknown-state handling.
+- [x] Implement the agreed vendor-count labels and separate SSH alert severity.
+- [x] Reject private and special-use addresses, send only the explicitly selected IP, and label mock responses.
 - [x] Implement local text report export with evidence, rule explanation, review history and live/sample provenance (CLI and HTTP checks).
-- [ ] Extend reports with provider context and action outcomes when those features exist; existing text reports do not establish provider integration.
+- [x] Show VirusTotal reputation and supporting facts in investigations and text reports.
+- [ ] Verify an authorized public-IP lookup against VirusTotal on the lab installation if needed. Action outcomes remain planned with enforcement.
 
 Acceptance: zero flags is no flags found, lookup failure is unknown, and private VM traffic never causes an external lookup. Reports contain no secrets.
 

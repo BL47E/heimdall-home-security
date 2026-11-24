@@ -8,7 +8,7 @@ The rubric confirms evaluation criteria, not a feature specification, report tem
 
 Use the [implementation status matrix](status.md) to connect each claim to code, tests and live evidence. Real SSH threshold/reopening, persistent history, authenticated dashboard, boot/crash recovery, service-aware controls, daily cleanup and owner-approved scheduled Discord delivery now have linked verification. Discord's controlled outage scenario injects a sender-only socket failure; it must not be described as a genuine Discord outage. Additional live rule scenarios and a sender-timer reboot observation remain open.
 
-The report, proposal, Gantt chart, presentation rehearsal and both students' individual contribution records remain unfinished. Existing agent-generated code/evidence does not establish equal student contribution or faculty acceptance. Use dated records without converting planned VirusTotal or blocking into implementation claims. The supplied faculty originals and their requirements below remain unchanged.
+The report, proposal, Gantt chart, presentation rehearsal and both students' individual contribution records remain unfinished. Existing agent-generated code/evidence does not establish equal student contribution or faculty acceptance. Use dated records to distinguish the VirusTotal source implementation and offline demo from live deployment. SSH blocking remains planned. The supplied faculty originals and their requirements below remain unchanged.
 
 ## Criteria and evidence plan
 
