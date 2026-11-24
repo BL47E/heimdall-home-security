@@ -1,6 +1,6 @@
 # Shell monitor and browser dashboard contract
 
-Status: implementation contract selected for the owner's 2026-11-04 request to build the monitor and a local browser dashboard. Reconciled November 17: this describes the implemented shell/HTTP/service/Discord interfaces. The [status matrix](status.md) links separate test and live-VM evidence. The dashboard extends ADR 0002; faculty questions remain open. VirusTotal and SSH blocking remain planned.
+This contract describes the shell, HTTP, service and provider interfaces. The [status matrix](status.md) records source and deployed evidence. The dashboard extends ADR 0002. Faculty questions remain open, and SSH blocking remains planned.
 
 ## Components and ownership
 
@@ -34,7 +34,7 @@ Machine-readable commands return one JSON value on stdout, with diagnostics on s
 | `heimdall config set JSON` | Validate a JSON object patch, reject unknown keys, atomically save and return full configuration. No partial update on invalid input. |
 | `heimdall ingest FILE` | Read newline-delimited journal JSON from a local file or `-` for stdin. Return counts such as `processed`, `duplicates`, `unsupported`, `malformed`; persist useful evidence. This is offline ingestion, never evidence of a healthy live monitor. |
 | `heimdall monitor run` | Foreground live journal consumer for a service manager or standalone use. An installed matching system unit owns this entry point; a managed invocation must belong to that unit's actual process control group. Stdout may be reserved for operational messages; documented exception to JSON command output. |
-| `heimdall monitor start` | Use the matching installed system unit when present; otherwise start an independent background journal consumer. Return status; detect duplicates. Never fall back to a detached process after a service control failure. |
+| `heimdall monitor start` | Use the matching installed system unit when present; otherwise start an independent background journal consumer. Wait for the new reader's own state (ready, reported error, or a bounded timeout) before returning status, so the report cannot rely on a fixed delay or a killed monitor's stale state. Detect duplicates. Never fall back to a detached process after a service control failure. |
 | `heimdall monitor stop` | Stop the matching installed system unit when present; otherwise stop only a proven standalone Heimdall monitor process. Return status. No arbitrary PID kills. |
 | `heimdall report ID` | Readable text investigation report, documented exception to JSON output. |
 | `heimdall cleanup` | Apply retention safely and return removal counts. |
@@ -43,6 +43,10 @@ Machine-readable commands return one JSON value on stdout, with diagnostics on s
 | `heimdall discord enable` / `disable` | Enable subsequent eligible transitions or stop delivery/enqueue; disabling preserves queued work and the credential. No historical-alert backfill. |
 | `heimdall discord status` | Return safe configuration, pending/delivered counts, retry timing, latest outcome and provider state; never the webhook URL. |
 | `heimdall discord flush` | Attempt a bounded initial queue snapshot, group/split messages and persist accepted or failed outcomes. No state transaction lock is held over HTTP. |
+| `heimdall virustotal configure` | Read one API key from stdin and save it privately for manual lookups. |
+| `heimdall virustotal disable` / `status` | Remove the key or return local setup state: `disabled`, `configured` or `needs_configuration`. |
+| `heimdall virustotal lookup ID` | Look up the source IP of a live journal alert and save the result with the alert. Ineligible IPs and unavailable results return Unknown. Fixture alerts cannot use this operation. |
+| `heimdall virustotal simulate ID COUNT` | Save a labelled sample vendor count on a fixture alert. Runs offline. |
 
 No web endpoint accepts arbitrary shell commands, filesystem paths, journal units or code. CLI ingestion is local-only. If a command cannot be implemented in the first pass, it must fail explicitly and the dashboard must label it unavailable.
 
@@ -84,10 +88,10 @@ Order and replay: persist cursor-based deduplication with state so restart canno
 {"id":"alert-reference","source_ip":"10.37.129.4","severity":"MEDIUM","review_status":"needs_review","first_seen":1793447700,"last_seen":1793447945,"failure_count":4,"rule":{"id":"ssh-password-burst","version":1,"threshold":4,"window_seconds":300},"explanation":"Four failed password attempts from this source within five minutes.","recommendation":"Review the account and the supporting SSH records.","event_ids":[],"events":[],"review_history":[],"provenance":"fixture"}
 ```
 
-`events` may be omitted in list responses but must be present on inspect. `review_history` records timestamp, resulting review status and reason (`owner` or `new_failure`).
+`events` may be omitted in list responses but must be present on inspect. `review_history` records timestamp, resulting review status and reason (`owner` or `new_failure`). `reputation` is optionally present after a lookup or simulation. It contains `label`, `flags` (integer or null for unknown), `checked_at` (Unix seconds), `provenance` (`live` or `simulated`), `from_cache` and `reason` (text or null). The alert's severity is `HIGH` when at least 10 vendors flagged the source and `MEDIUM` otherwise.
 
 ```json
-{"monitor":{"state":"stopped","pid":null,"source":"journalctl -u ssh","last_event_at":null,"last_error":null,"coverage":"unavailable"},"counts":{"events":0,"alerts":0,"needs_review":0},"providers":{"discord":"disabled","virustotal":"not_implemented"},"mode":"live","config":{"threshold":4,"window_seconds":300,"retention_days":60}}
+{"monitor":{"state":"stopped","pid":null,"source":"journalctl -u ssh","last_event_at":null,"last_error":null,"coverage":"unavailable"},"counts":{"events":0,"alerts":0,"needs_review":0},"providers":{"discord":"disabled","virustotal":"disabled"},"mode":"live","config":{"threshold":4,"window_seconds":300,"retention_days":60}}
 ```
 
 The status JSON above is abbreviated. Full live responses also include `monitor.manager`, `monitor.service` and the safe `discord` summary. Discord provider states are `disabled`, `fixture_destination_mismatch`, `needs_configuration`, `rate_limited`, `delivery_error`, `pending`, `delivered` or `configured`. An exited sender with code zero may have had no eligible work; inspect pending counts and accepted outcomes.
@@ -138,4 +142,4 @@ The installed optional `heimdall-discord.service` runs the fixed CLI flush as th
 
 Notifications enqueue atomically for new eligible alerts and new failures reopening Reviewed alerts. Continuing unreviewed failures, duplicate replay and manual reopen do not each enqueue a notice. A flush takes at most 100 eligible notices in its starting snapshot and attempts at most ten message chunks; concurrent arrivals remain pending. Reopening notices refer to the current alert summary at send time. Accepted remote messages acknowledge only their transmitted IDs. Failed/uncertain attempts retain pending work and ambiguity; exactly-once delivery is not guaranteed.
 
-Provider credentials and enabling controls are CLI-only. The browser status endpoint returns safe provider state through the shared CLI, but no endpoint configures a webhook. Existing text reports do not contain provider-specific delivery sections. Live outage recovery evidence used injected sender-only socket failure; real provider rate limits, timeouts and ambiguous-response cases are covered separately with fake endpoints.
+Provider credentials and configuration use the CLI. The browser status endpoint returns safe provider state through the shared CLI. Text reports include saved VirusTotal context, while Discord notices summarize the reputation available at delivery time. Discord outage recovery evidence used an injected sender-only socket failure. Fake endpoints cover rate limits, timeouts and ambiguous responses.

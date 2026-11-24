@@ -24,8 +24,23 @@ monitor_command() {
   case "$action" in
     start)
       if [ "$(jq -r '.mode' "$STATE")" = fixture ]; then err 'Fixture state cannot become live; use a separate live data directory'; fi
+      old_pid=$(jq -r '.monitor.pid // "none"' "$STATE")
       nohup "$ROOT/bin/heimdall" monitor run >>"$DATA/monitor.log" 2>&1 </dev/null &
-      sleep 0.3
+      # Wait until the NEW reader reports itself: the killed monitor's stale
+      # state can still read "running available", so match on a changed pid.
+      attempts=0
+      while :; do
+        sleep 0.1
+        report=$(jq -r --arg old "$old_pid" '
+          .monitor as $m |
+          if (($m.pid // "none") | tostring) == ($old | tostring) then "starting"
+          elif $m.state == "error" then "error"
+          elif $m.coverage == "available" then "ready"
+          else "starting" end' "$STATE" 2>/dev/null || echo starting)
+        [ "$report" != starting ] && break
+        attempts=$((attempts + 1))
+        [ "$attempts" -lt 80 ] || break
+      done
       "$ROOT/bin/heimdall" status
       ;;
     stop)
@@ -93,6 +108,10 @@ monitor_run() {
     fi
     rm -f "$MONITOR_LOCK/probe"
   fi
+  export HEIMDALL_INTERNAL_MONITOR=$$
+  # Mark coverage before the reader exists: the first journal record is
+  # ingested concurrently, and its save must never clobber this flag.
+  "$ROOT/bin/heimdall" _monitor_state '{"coverage":"available"}' >/dev/null
   mkfifo "$fifo"
   if [ -n "$cursor" ]; then
     journalctl -u ssh --no-pager -o json --follow --after-cursor="$cursor" 9>&- >"$fifo" 2>"$DATA/journal-error.log" &
@@ -100,8 +119,6 @@ monitor_run() {
     journalctl -u ssh --no-pager -o json --follow --since now 9>&- >"$fifo" 2>"$DATA/journal-error.log" &
   fi
   journal_pid=$!
-  export HEIMDALL_INTERNAL_MONITOR=$$
-  "$ROOT/bin/heimdall" _monitor_state '{"coverage":"available"}' >/dev/null
   while IFS= read -r record; do
     printf '%s\n' "$record" | "$ROOT/bin/heimdall" _journal_ingest - >/dev/null || {
       "$ROOT/bin/heimdall" _monitor_state '{"state":"error","last_error":"Journal event could not be persisted","coverage":"unavailable"}' >/dev/null
