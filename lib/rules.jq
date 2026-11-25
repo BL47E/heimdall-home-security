@@ -1,5 +1,14 @@
 # State transitions for supported SSH password outcomes. Input events are data.
 include "notifications";
+def late_record_note:
+  "Late record retained as evidence; excluded from current rule transitions";
+
+def failures_in_window($event; $earliest):
+  [.events[] | select(.outcome == "failure" and .source_ip == $event.source_ip and
+    .provenance == $event.provenance and .timestamp != null and
+    .timestamp >= $earliest and .timestamp <= $event.timestamp and
+    ((.notes // []) | index(late_record_note) == null))];
+
 def apply_event($incoming; $now):
   if any(.events[]; .id == $incoming.id) then .stats.duplicates += 1
   else
@@ -12,18 +21,18 @@ def apply_event($incoming; $now):
       ($e.source_ip + ":" + $e.provenance) as $key |
       (.sources[$key] // {last:null,burst_start:null,active_alert:null}) as $source |
       if $source.last != null and $e.timestamp < $source.last then
-        .events += [$e + {notes:($e.notes + ["Late record retained as evidence; excluded from current rule transitions"])}]
+        .events += [$e + {notes:($e.notes + [late_record_note])}]
       elif $e.outcome == "success" then
         ($e.provenance == "journal" and ((.monitor.coverage_since // $e.timestamp) > ($e.timestamp - $config.window_seconds))) as $incomplete |
         .events += [$e + {notes:($e.notes + if $incomplete then ["Full preceding window is not covered; preceding failure count is unknown"] else [] end),preceding_failures:(if $e.username == null or $incomplete then null else
-          [.events[] | select(.outcome == "failure" and .source_ip == $e.source_ip and .username == $e.username and .provenance == $e.provenance and .timestamp != null and .timestamp >= ($e.timestamp - $config.window_seconds) and .timestamp <= $e.timestamp)] | length end)}]
+          failures_in_window($e; $e.timestamp - $config.window_seconds) | map(select(.username == $e.username)) | length end)}]
       else
         .config as $config |
         (if $source.last == null or ($e.timestamp - $source.last) >= $config.window_seconds
          then {last:$e.timestamp,burst_start:$e.timestamp,active_alert:null}
          else $source + {last:$e.timestamp} end) as $next |
         .events += [$e] |
-        [.events[] | select(.outcome == "failure" and .source_ip == $e.source_ip and .provenance == $e.provenance and .timestamp != null and .timestamp >= $next.burst_start and .timestamp >= ($e.timestamp - $config.window_seconds) and .timestamp <= $e.timestamp)] as $window |
+        failures_in_window($e; ([$next.burst_start, $e.timestamp - $config.window_seconds] | max)) as $window |
         if $next.active_alert != null then
           (any(.alerts[]; .id == $next.active_alert and .review_status == "reviewed")) as $reopens |
           .alerts |= map(if .id == $next.active_alert then

@@ -39,12 +39,19 @@ The panel reads and controls Heimdall through its existing commands only. Openin
 Setup checks the runtime, SSH journal access and private local state. Finish in local mode for live monitoring, or offline mode to explore the labelled demo first."""
 
 COMMAND_HELP = """/overview  /setup  /providers  /demo    Open a page
+/rules    View or edit rule settings
 /refresh    Reload monitor status and lists
 /config {"threshold":5}    Apply a validated settings patch (asks first)
 /help    Show this list
 /exit    Leave Heimdall
 
 Anything else is unknown. Leaving normally requires the exact command /exit; Ctrl+C also interrupts the process and restores the terminal."""
+
+RULE_FIELDS = (
+    ("threshold", "Failure threshold"),
+    ("window_seconds", "Window (seconds)"),
+    ("retention_days", "Retention (days)"),
+)
 
 
 @dataclass(frozen=True)
@@ -74,9 +81,9 @@ def journal_access():
                 return "Readable", "This login can read an SSH journal record."
         detail = check.stderr.lower()
         if any(hint in detail for hint in ("permission", "access", "not seeing messages")):
-            return "Access needed", "Ask the VM administrator to review journal access for this login."
+            return "Access needed", "Ask the system administrator to review journal access for this login."
     except (OSError, ValueError, subprocess.TimeoutExpired):
-        return "Check failed", "Run the journal check in the Permissions guide from the VM terminal."
+        return "Check failed", "Run the journal check in the Permissions guide from the Linux terminal."
     return "Unverified", "The journal returned no readable SSH records. Check the SSH service and its logs."
 
 
@@ -133,6 +140,7 @@ class Panel:
         self.journal = ("Unchecked", "")
         self.command_text = ""
         self.command_mode = False
+        self.rule_field = None
         self.message = ""
         self.heading = curses.A_BOLD
         self.muted = curses.A_DIM
@@ -210,17 +218,17 @@ class Panel:
                   {ord("y"): run_confirmed}, "y confirm")
 
     def permissions(self):
-        self.show("Review journal permissions", """On the monitored Ubuntu VM, run this as the account that will use Heimdall.
+        self.show("Review journal permissions", """On the monitored Linux system, run this as the account that will use Heimdall.
 
 journalctl -u ssh -n 1 --no-pager -o json
 
 A record confirms read access. An empty result can also mean that the SSH service has written no records. Check the service and its logs before changing permissions.
 
-If access is denied, ask the VM administrator to review systemd-journal membership for your account. This group can read system logs beyond SSH. If approved, the account owner can run the command below in the VM terminal, then sign out of Ubuntu and sign back in.
+If access is denied, ask the system administrator to review systemd-journal membership for your account. This group can read system logs beyond SSH. If approved, run the command below on that system, then sign out and sign back in.
 
 sudo usermod -aG systemd-journal "$USER"
 
-Press r in Setup after signing back in. Use your regular Ubuntu account for Heimdall.""")
+Press r in Setup after signing back in. Use your regular login for Heimdall.""")
 
     # -- actions -------------------------------------------------------------
 
@@ -283,13 +291,13 @@ Press r in Setup after signing back in. Use your regular Ubuntu account for Heim
         if monitor.get("last_error"):
             text += "\n\n" + monitor["last_error"]
         if monitor.get("manager") == "systemd":
-            text += ("\n\nUbuntu's service manager owns the SSH reader. If regular controls are denied, "
-                     "an administrator can use these commands on the VM:\n\n"
+            text += ("\n\nThe Linux service manager owns the SSH reader. If regular controls are denied, "
+                     "an administrator can use these commands on the monitored system:\n\n"
                      "sudo systemctl start heimdall-monitor.service\n"
                      "sudo systemctl stop heimdall-monitor.service")
         else:
             text += "\n\nFor boot startup, follow the reviewed systemd setup in docs/runbook.md."
-        text += "\n\nStart or stop from the Overview page; Ubuntu policy may require an administrator."
+        text += "\n\nStart or stop from the Overview page. Local policy may require an administrator."
         self.show("Monitor status", text)
 
     def open_investigation(self, alert):
@@ -325,17 +333,43 @@ Press r in Setup after signing back in. Use your regular Ubuntu account for Heim
         self.show("Recent events", "\n".join(lines))
 
     def open_rules(self):
+        if not self.status:
+            self.show("Rule settings", self.status_error or "Initialize private local state in Setup first.")
+            return
         config = self.status.get("config", {}) or {}
-        threshold = config.get("threshold", "unset")
-        window = config.get("window_seconds", "unset")
-        retention = config.get("retention_days", "unset")
         history = self.command("config", "history")
         changes = (f"{len(history)} recorded change(s), latest: {json.dumps(history[-1]['patch'])}."
                     if history else "No configuration changes recorded.")
-        self.show("Rule settings",
-                  f"An alert opens when {threshold} failures arrive from one source IP within {window} seconds."
-                  f" Records are kept for {retention} days.\n\n"
-                  f'Change settings with /config — for example:\n/config {{"threshold":5}}\n\n{changes}')
+        values = "\n".join(
+            f"{index}. {label}  {config.get(field, 'unset')}"
+            for index, (field, label) in enumerate(RULE_FIELDS, 1)
+        )
+        keys = {
+            ord(str(index)): lambda field=field, label=label: self.edit_rule(field, label)
+            for index, (field, label) in enumerate(RULE_FIELDS, 1)
+        }
+        self.show("Rule settings", f"{values}\n\n{changes}", keys, "1–3 edit")
+
+    def edit_rule(self, field, label):
+        self.rule_field = (field, label)
+        self.command_mode, self.command_text = True, ""
+        self.show(f"Edit {label.lower()}", "Enter a whole number, then press Enter to review.")
+
+    def review_rule_edit(self, text):
+        field, label = self.rule_field
+        if not text:
+            self.rule_field = None
+            self.open_rules()
+            return
+        if not text.isdecimal() or len(text) > 10:
+            self.edit_rule(field, label)
+            self.show(f"Edit {label.lower()}", "Enter a whole number using digits 0–9.")
+            return
+        self.rule_field = None
+        value = int(text)
+        patch = json.dumps({field: value})
+        self.confirm("Apply configuration change", f"Set {label.lower()} to {value}.",
+                     lambda: self.apply_config(patch))
 
     def apply_config(self, patch):
         self.command("config", "set", patch)
@@ -443,6 +477,9 @@ Press r in Setup after signing back in. Use your regular Ubuntu account for Heim
                  "Pause collection until restart." if state == "running"
                  else "Begin reading SSH activity through the monitor command.",
                  self.stop_monitor if state == "running" else self.start_monitor),
+            Item(f"Rules  /  {(self.status.get('config') or {}).get('threshold', '?')} failures in "
+                 f"{(self.status.get('config') or {}).get('window_seconds', '?')}s",
+                 "Edit threshold, window and retention.", self.open_rules),
         ]
         if self.alerts:
             items += [
@@ -457,10 +494,6 @@ Press r in Setup after signing back in. Use your regular Ubuntu account for Heim
         items += [
             Item(f"Recent events  /  {counts.get('events', 0)} stored",
                  "Latest SSH observations and their outcomes.", self.open_events),
-            Item(f"Rules  /  {(self.status.get('config') or {}).get('threshold', '?')} failures in "
-                 f"{(self.status.get('config') or {}).get('window_seconds', '?')}s",
-                 f"Retention {(self.status.get('config') or {}).get('retention_days', '?')} days",
-                 self.open_rules),
             Item("Providers  /  Discord " + (self.status.get("providers", {}) or {}).get("discord", "unconfigured").replace("_", " ")
                  + " · VirusTotal " + (self.status.get("providers", {}) or {}).get("virustotal", "unconfigured").replace("_", " "),
                  "Optional delivery and reputation. Enter opens configuration.", lambda: self.navigate(2)),
@@ -539,9 +572,9 @@ Press r in Setup after signing back in. Use your regular Ubuntu account for Heim
 
     def run_command(self, text):
         """Run one bar command. Returns False only for the exact /exit."""
-        command = "/" + text.strip().lstrip("/")
-        if command == "/exit":
+        if text == "exit":
             return False
+        command = "/" + text.strip().lstrip("/")
         if command == "/help":
             self.show("Commands", COMMAND_HELP)
             return True
@@ -549,8 +582,8 @@ Press r in Setup after signing back in. Use your regular Ubuntu account for Heim
             self.refresh()
             self.message = "Refreshed."
             return True
-        if (command not in ("/overview", "/setup", "/providers", "/demo")
-                and not command.startswith("/config")):
+        if (command not in ("/overview", "/setup", "/providers", "/demo", "/rules", "/config")
+                and not command.startswith("/config ")):
             self.message = f"Unknown command {command.split()[0]} — /help lists commands."
             return True
         if self.onboarding is not None:
@@ -564,6 +597,8 @@ Press r in Setup after signing back in. Use your regular Ubuntu account for Heim
             self.navigate(2)
         elif command == "/demo":
             self.navigate(3)
+        elif command == "/rules":
+            self.open_rules()
         else:
             patch = command[len("/config"):].strip()
             try:
@@ -605,7 +640,8 @@ Press r in Setup after signing back in. Use your regular Ubuntu account for Heim
 
     def draw_command_bar(self, rows, cols):
         if self.command_mode:
-            self.write(rows - 1, 2, "/" + self.command_text + " ", cols - 3)
+            prefix = "> " if self.rule_field else "/"
+            self.write(rows - 1, 2, prefix + self.command_text, cols - 3)
         else:
             text = self.message or "/ commands    /exit leaves"
             self.write(rows - 1, 2, text, cols - 3,
@@ -615,7 +651,8 @@ Press r in Setup after signing back in. Use your regular Ubuntu account for Heim
         # Runs last so list rendering cannot move the typing cursor away.
         try:
             if self.command_mode:
-                self.screen.move(rows - 1, min(3 + len(self.command_text), cols - 2))
+                prefix_width = 2 if self.rule_field else 1
+                self.screen.move(rows - 1, min(2 + prefix_width + len(self.command_text), cols - 2))
                 curses.curs_set(1)
             else:
                 curses.curs_set(0)
@@ -712,9 +749,14 @@ Press r in Setup after signing back in. Use your regular Ubuntu account for Heim
         """Handle one keystroke while the command bar has focus. Returns False to exit."""
         if key == 27:
             self.command_mode, self.command_text = False, ""
+            if self.rule_field:
+                self.review_rule_edit("")
         elif key in ENTER + (curses.KEY_ENTER,):
             self.command_mode = False
             text, self.command_text = self.command_text, ""
+            if self.rule_field:
+                self.review_rule_edit(text)
+                return True
             return self.run_command(text)
         elif key in (8, 127, curses.KEY_BACKSPACE):
             self.command_text = self.command_text[:-1]
@@ -766,12 +808,11 @@ Press r in Setup after signing back in. Use your regular Ubuntu account for Heim
                 continue
             if key == curses.KEY_RESIZE:
                 continue
-            if self.command_mode:
-                if not self.handle_command_key(key):
-                    return
-                continue
             try:
-                if key == ord("/"):
+                if self.command_mode:
+                    if not self.handle_command_key(key):
+                        return
+                elif key == ord("/"):
                     self.command_mode, self.command_text = True, ""
                 elif self.dialog:
                     if key in self.dialog_keys:
@@ -811,7 +852,7 @@ Press r in Setup after signing back in. Use your regular Ubuntu account for Heim
 def main():
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         print("Heimdall's terminal app needs an interactive terminal. "
-              "Run heimdall, or heimdall tui, in a terminal.", file=sys.stderr)
+              "Run heimdall --console in a terminal.", file=sys.stderr)
         return 1
     if curses is None or os.environ.get("TERM") in (None, "", "dumb"):
         print("Heimdall's terminal app needs Python curses and a supported TERM.", file=sys.stderr)

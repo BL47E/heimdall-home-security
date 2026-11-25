@@ -1,8 +1,8 @@
 # Running Heimdall
 
-Current operating checkpoint: [November 17 status](status.md), [deployment](verification/2026-11-17-deployment.md) and [Discord](verification/2026-11-17-discord.md). Monitor, cleanup and sender are enabled on blue; the dashboard starts manually. Dated records are not a fresh health probe.
+Current operating checkpoint: [status](status.md) and [November 25 service switch](verification/2026-11-25-service-switch.md); earlier [deployment](verification/2026-11-17-deployment.md) and [Discord](verification/2026-11-17-discord.md) checks remain relevant. Monitor, cleanup and sender are enabled on blue; the dashboard starts manually. Dated records are not a fresh health probe.
 
-This runbook covers the shell monitor and owner-requested local browser dashboard described in [ADR 0003](adr/0003-shell-monitor-with-local-dashboard.md). The first CLI is implemented and [tested on blue](verification/2026-11-04-cli-blue.md), including real fourth-failure alerts and restart persistence. The dashboard was verified on blue over loopback and from the Mac over Host-Only. [Deployment evidence](../diary.md#2026-11-05--dashboard-deployed-and-verified-on-blue) Commands and schemas follow [the runtime contract](runtime-contract.md); boot startup and bounded systemd recovery were verified on blue on 2026-11-07 ([evidence](verification/2026-11-07-systemd.md)); faculty acceptance of the dashboard remains open.
+This runbook covers the shell monitor and owner-requested local browser dashboard described in [ADR 0003](adr/0003-shell-monitor-with-local-dashboard.md). The first CLI is implemented and [tested on blue](verification/2026-11-04-cli-blue.md), including real fourth-failure alerts and restart persistence. The dashboard was verified on blue over loopback and from the Mac over Host-Only. [Deployment evidence](verification/2026-11-05-dashboard.md) Commands and schemas follow [the runtime contract](runtime-contract.md); boot startup and bounded systemd recovery were verified on blue on 2026-11-07 ([evidence](verification/2026-11-07-systemd.md)); faculty acceptance of the dashboard remains open.
 
 ## What runs where
 
@@ -31,7 +31,7 @@ If the owner account cannot read SSH's system journal, an administrator must rev
 
 The current application version is `0.1.0`. From its release directory, `./bin/heimdall help` lists the commands, `./bin/heimdall version` prints the version, and `./bin/heimdall demo` runs a labelled synthetic walkthrough without changing live state. The CLI prints JSON for machine-readable operations; pipe a result to `jq` when inspecting it. `config history` shows saved configuration changes.
 
-For the verified installation on blue, use `~/heimdall/heimdall help` or `~/heimdall/heimdall status` from any directory. After the November 25 switch the launcher and the monitor/cleanup/Discord units run the release at `/home/blazeblue/heimdall/releases/0.1.0-342daa1/heimdall-0.1.0` ([switch evidence](verification/2026-11-25-service-switch.md)); the earlier `0.1.0-ecaec12` and `0.1.0-vt` releases remain on disk, and pre-switch unit/launcher/state backups are saved privately under `~/heimdall/evidence/2026-11-25-service-switch/`. The monitor is managed by the enabled `heimdall-monitor.service`. Check `systemctl status heimdall-monitor --no-pager` and `~/heimdall/heimdall status` after boot. Use `sudo systemctl start|stop|restart heimdall-monitor` to manage this installed service; the vertical bars mean choose one action. Browser/CLI controls validate the unit's release, data-directory and owner identity before controlling it; a release that does not match the installed unit reports the mismatch instead of pretending to control it. Existing Ubuntu authorization denies unprivileged start/stop, returning an administrator instruction instead of starting a separate process. Use the console systemctl commands for actual lifecycle changes on blue.
+On Blue, use `heimdall --help` or `heimdall status` from any directory in a new Bash terminal. Blue's PATH launcher currently uses a compatibility wrapper for the installed release. After upgrading to a release with native `--console` and `dashboard` commands, run `bash scripts/install-cli.sh "$HOME/heimdall/heimdall"` from that release to register the normal service launcher. After the November 25 switch the launcher and the monitor/cleanup/Discord units run the release at `/home/blazeblue/heimdall/releases/0.1.0-342daa1/heimdall-0.1.0` ([switch evidence](verification/2026-11-25-service-switch.md)); the earlier `0.1.0-ecaec12` and `0.1.0-vt` releases remain on disk, and pre-switch unit/launcher/state backups are saved privately under `~/heimdall/evidence/2026-11-25-service-switch/`. The monitor is managed by the enabled `heimdall-monitor.service`. Check `systemctl status heimdall-monitor --no-pager` and `~/heimdall/heimdall status` after boot. Use `sudo systemctl start|stop|restart heimdall-monitor` to manage this installed service; the vertical bars mean choose one action. Browser/CLI controls validate the unit's release, data-directory and owner identity before controlling it; a release that does not match the installed unit reports the mismatch instead of pretending to control it. Existing Ubuntu authorization denies unprivileged start/stop, returning an administrator instruction instead of starting a separate process. Use the console systemctl commands for actual lifecycle changes on blue.
 
 For a new standalone setup with no installed monitor service, enter its release directory and run these commands. On blue's existing service-managed installation, use the administrator systemctl commands above instead of standalone startup:
 
@@ -70,21 +70,24 @@ Transaction and monitor locks use an operating-system advisory lock through a sm
 
 ## Terminal panel and onboarding
 
-Run `./bin/heimdall` with no arguments in an interactive terminal to open the Heimdall terminal app; `./bin/heimdall tui` is the explicit form. Noninteractive invocations (scripts, pipes) still print plain help. On Blue, the installed launcher opens the app once a release containing it is installed. Use a regular login and a terminal with Python curses support and at least 48 columns by 14 rows. The palette uses a genuine black background with light text and one cyan accent; the first line always shows monitor state, coverage and alert counts.
+From the retained Linux release directory, run `bash scripts/install-cli.sh` as the account that uses Heimdall. It installs a launcher into `~/.local/bin` and registers that directory on the account's Bash command search path. Open a new Bash terminal and run `heimdall --help` from any directory to list the commands. On a service-managed install with an existing launcher, pass that launcher's path to the installer so the named command keeps using the release and state selected for the service.
+
+Run `heimdall --console` to open the terminal app. Bare `heimdall` also opens it in an interactive terminal and prints plain help when run noninteractively. Run `./bin/heimdall --console` to try it directly from a checkout. Use a regular login and a terminal with Python curses support and at least 48 columns by 14 rows. The palette uses a genuine black background with light text and one cyan accent; the first line always shows monitor state, coverage and alert counts.
 
 The first launch in each state directory opens guided onboarding: a welcome, a prerequisites and SSH journal check, and local state preparation. An existing state directory — such as Blue's — is adopted unchanged; nothing is reset and no history, reviews or provider configuration are touched. Finish in **local mode** for live SSH monitoring or **offline mode** to start with the labelled demo. Completion is saved explicitly in a private `tui.json` record; later launches open the regular workspace, and Setup remains available for rechecks. Opening the panel never modifies accounts, groups, network, firewall or services.
 
 - **Overview** is the working home: monitor status and start/stop, each alert with its investigation and review/reopen, recent events, rule settings and provider summary, plus access to Setup and Demo.
 - Press **1–4** or **Tab** to switch pages, **Up/Down** to select, **Enter** to open, **r** to refresh. In detail panels, **Up/Down** scrolls, **Esc** returns, and **y** confirms or reviews where a footer says so.
-- Type **/** to open the persistent command bar. Commands: `/overview`, `/setup`, `/providers`, `/demo`, `/refresh`, `/config {"threshold":5}` (confirmed before applying), `/help`.
+- Open **Rules** from Overview or type **`/rules`** to edit the failure threshold, time window or retention. Press **1–3** to choose a setting, type its new value, press **Enter** to review, then press **y** to save or **Esc** to cancel.
+- Type **/** to open the command bar. It also supports `/overview`, `/setup`, `/providers`, `/demo`, `/refresh`, `/config {"threshold":5}` (confirmed before applying) and `/help`.
 - Leaving during normal use requires the exact command **`/exit`**. Neither **q** nor **Esc** exits; Esc cancels the command bar, returns from details or steps back in onboarding. Ctrl+C also interrupts the process and restores the terminal.
 - In **Setup**, check the required tools and initialize local state. Open **SSH journal** for the read-access check and the administrator's permission review steps. **Providers** accepts optional Discord and VirusTotal credentials through hidden input; saving a Discord webhook and enabling delivery are separate actions. **Demo** runs the synthetic walkthrough in separate state.
 
-The panel shows installer and permission commands for review in the VM console. Run approved administrator commands there, then return to Setup and press **r** to check access again.
+The panel shows installer and permission commands for review. Run approved administrator commands in the terminal on the monitored Linux system, then return to Setup and press **r** to check access again.
 
 ## Packaging a build for the VM
 
-On the development Mac, run `./scripts/package.sh` from the repository. It writes `dist/heimdall-0.1.0.tar.gz` and a SHA-256 checksum file. Only the allowlisted application, tests, synthetic fixtures and selected documentation are packaged; local evidence, tokens and caches are excluded. Transfer both files to blue using verified SSH, check `sha256sum -c heimdall-0.1.0.tar.gz.sha256` there, then extract into a fresh release directory under `~/heimdall/releases`. Keep an earlier release and live state intact when updating. Start the new build using its own `bin/heimdall` path; no system-wide installation or PATH edit is required.
+On the development Mac, run `./scripts/package.sh` from the repository. It writes `dist/heimdall-0.1.0.tar.gz` and a SHA-256 checksum file. Only the allowlisted application, tests, synthetic fixtures and selected documentation are packaged; local evidence, tokens and caches are excluded. Transfer both files to blue using verified SSH, check `sha256sum -c heimdall-0.1.0.tar.gz.sha256` there, then extract into a fresh release directory under `~/heimdall/releases`. Keep an earlier release and live state intact when updating. Start the new build using its own `bin/heimdall` path for verification, then use the installer above to register the approved launcher.
 
 Retention cleanup runs explicitly with `./bin/heimdall cleanup`. It uses the configured retention period. The daily cleanup timer is installed and enabled on blue. It uses the same owner, release and state directory as the monitor; the monitor service itself does not schedule cleanup.
 
@@ -98,10 +101,10 @@ Local rendered-unit tests verify the command against disposable state, including
 
 ## Browser login on blue
 
-Run this in a second terminal in the repository, with the same account and state directory:
+Run this in a second terminal, with the same account and state directory:
 
 ```sh
-python3 web/server.py --host 127.0.0.1 --port 8765
+heimdall dashboard
 ```
 
 Open `http://127.0.0.1:8765` in blue's browser. The server creates a private `web-token` file and prints its location. Read that file in blue's terminal, paste its token into the dashboard's owner login, and leave the token out of screenshots, Git and shared messages. The browser receives a session cookie; the owner token is never placed in a URL. This token is separate from the Ubuntu password.
@@ -123,7 +126,7 @@ ip -br address
 For Mac-to-blue access, use the current Host-Only address when available: after the owner's laptop reset this is `10.37.129.8` (observed November 25), so the dashboard URL is `http://10.37.129.8:8765/overview`. Earlier verified addresses in the diary are historical. After booting blue, start the dashboard manually from the deployed release directory using the command below. Stop the loopback server with Ctrl+C, then bind to the chosen address explicitly; replace `BLUE_LOCAL_IP` with that address:
 
 ```sh
-python3 web/server.py --host BLUE_LOCAL_IP --port 8765
+heimdall dashboard --host BLUE_LOCAL_IP --port 8765
 ```
 
 Open `http://BLUE_LOCAL_IP:8765` from a browser that can reach it, then use the same owner-token login. Prefer a specific address to `0.0.0.0`, which listens on every adapter. Parallels Host-Only is ordinarily reachable from the Mac and guests on that network, not directly from a phone. T3 Connect screenshots show the Mac's work; they do not automatically make the VM's dashboard reachable from the phone.

@@ -77,6 +77,18 @@ class MonitorTests(unittest.TestCase):
         self.ingest(*[self.event(10 + i, 1303 + i) for i in range(4)])
         self.assertEqual(len(self.cli("alerts")), 2)
 
+    def test_late_failure_remains_evidence_without_counting_in_later_rules(self):
+        self.ingest(self.event(1, 1000), self.event(2, 1020), self.event(3, 1010))
+        self.assertIn("Late record", self.cli("events")[0]["notes"][-1])
+        self.ingest(self.event(4, 1030))
+        self.assertEqual(self.cli("alerts"), [])
+        self.ingest(self.event(5, 1035, verb="Accepted"))
+        self.assertEqual(self.cli("events")[0]["preceding_failures"], 3)
+        self.ingest(self.event(6, 1040))
+        alert = self.cli("inspect", self.cli("alerts")[0]["id"])
+        self.assertEqual([event["cursor"] for event in alert["events"]],
+                         ["synthetic:1", "synthetic:2", "synthetic:4", "synthetic:6"])
+
     def test_inclusive_rolling_boundary(self):
         self.ingest(*[self.event(i, 1000 + i * 100) for i in range(4)])
         self.assertEqual(self.cli("alerts")[0]["failure_count"], 4)
@@ -87,6 +99,34 @@ class MonitorTests(unittest.TestCase):
         self.ingest(e)
         self.assertTrue(self.cli("events")[0]["invalid_user"])
         self.assertEqual(self.ingest(e)["duplicates"], 1)
+
+    def test_journal_ingestion_requires_an_active_monitor(self):
+        self.cli("init")
+        self.cli("_journal_ingest", "-", data=json.dumps(self.event(1, 1000)), ok=False)
+        self.assertEqual(self.cli("events"), [])
+
+    def test_fixture_ingestion_cannot_replace_live_state_with_a_saved_cursor(self):
+        self.cli("init")
+        state = Path(self.directory.name) / "state.json"
+        value = json.loads(state.read_text())
+        value["cursor"] = "saved-after-pruning-events"
+        state.write_text(json.dumps(value))
+        self.cli("ingest", "-", data=json.dumps(self.event(1, 1000)), ok=False)
+        self.assertEqual(json.loads(state.read_text()), value)
+
+    def test_non_record_journal_probe_leaves_coverage_unavailable(self):
+        mock = Path(self.directory.name) / "mock"
+        mock.mkdir()
+        journal = mock / "journalctl"
+        journal.write_text("#!/bin/sh\nprintf '%s\\n' 'No usable records'\n")
+        journal.chmod(0o700)
+        self.env["PATH"] = str(mock) + ":" + self.env["PATH"]
+
+        self.cli("monitor", "run", ok=False)
+        status = self.cli("status")["monitor"]
+        self.assertEqual(status["state"], "error")
+        self.assertEqual(status["coverage"], "unavailable")
+        self.assertIn("SSH journal unavailable", status["last_error"])
 
     def test_lost_journal_cursor_fails_closed(self):
         self.cli("init")

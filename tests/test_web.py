@@ -291,6 +291,22 @@ class WebTest(unittest.TestCase):
             )[0]
             self.assertEqual(status, 401 if index < 5 else 429)
 
+    def test_login_rejects_non_text_token_encoding(self):
+        status, _, body = self.request(
+            "POST", "/api/login", json.dumps({"token": "\ud800"}),
+            {"Origin": "http://" + self.host, "Content-Type": "application/json"},
+        )
+        self.assertEqual(status, 401)
+        self.assertEqual(json.loads(body), {"error": "Invalid token."})
+
+    def test_wildcard_binding_and_linked_state_directory_are_refused(self):
+        with self.assertRaisesRegex(ValueError, "specific local IPv4 address"):
+            web.Server(("0.0.0.0", 0), ROOT / "bin/heimdall", self.data)
+        linked = self.data.parent / "linked"
+        linked.symlink_to(self.data, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "symbolic link"):
+            web.Server(("127.0.0.1", 0), ROOT / "bin/heimdall", linked)
+
     def test_service_control_denial_uses_real_cli_without_fallback(self):
         fixture = test_service.ServiceManagerTests()
         fixture.setUp()

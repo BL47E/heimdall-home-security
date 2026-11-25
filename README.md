@@ -10,39 +10,29 @@ A college project for Linux & Shell Programming (CSET-213).
 
 </div>
 
+## Home deployment target
+
+Heimdall is intended to run as a background service on a small Linux network-attached storage (NAS) system, with monitoring and records kept on the NAS. For quick setup or settings changes, open the terminal user interface (TUI) directly on the NAS with `heimdall`. For access away from home, the owner will configure Tailscale on the NAS and open the same dashboard in a browser from an authorized phone or laptop. This [private remote access](https://github.com/BL47E/heimdall-home-security/issues/16) is planned.
+
+The Ubuntu VMs are the current development and test environment. See the [blueprint](HEIMDALL_BLUEPRINT.md) for the home deployment direction.
+
 ## Current status
 
-**Heimdall CLI and dashboard are deployed on blue.** The November 17 update deploys source commit `ecaec12` into a fresh release, with service-aware controls and enabled daily cleanup. All 66 packaged Python tests passed on Ubuntu, plus the shell checks. Live CLI/API checks verified service identity, truthful stopped/running status, denied unprivileged control without a fallback, preserved records and successful cleanup. [Latest deployment evidence](docs/verification/2026-11-17-deployment.md)
+The shell monitor, dashboard, terminal app, service controls, daily cleanup and Discord delivery are deployed on blue. The November 25 release passed 82 tests on Ubuntu and the service switch preserved live state. The dashboard starts manually; unprivileged start/stop requests require administrator commands. VirusTotal supports manual lookups and labelled simulation; a live lookup remains unverified. SSH blocking is planned behind a separate design and recovery gate.
 
-The monitor is enabled at boot; earlier real reboot/crash checks are recorded in [service evidence](docs/verification/2026-11-07-systemd.md). The dashboard still starts manually. Start/stop requests from the unprivileged CLI/dashboard require administrator console commands on this installation; no broader control permissions were added. Discord is connected to the owner-approved test server: real threshold/reopening messages, controlled sender-failure recovery and automatic scheduled delivery were verified on November 17. [Discord evidence](docs/verification/2026-11-17-discord.md)
-
-The current milestone is a shell-first SSH monitor on Ubuntu ARM64, with shell commands and an owner-requested browser dashboard for status, evidence, review and configuration. [ADR 0003](docs/adr/0003-shell-monitor-with-local-dashboard.md) extends [ADR 0002](docs/adr/0002-shell-first-college-milestone.md): Python's standard library serves HTTP while shell/jq handles SSH rules and state. The broader NAS/router product in [the blueprint](HEIMDALL_BLUEPRINT.md) remains future direction. Faculty acceptance of the expanded dashboard technology remains unconfirmed.
-
-See the [runbook](docs/runbook.md) for local startup, owner-token login, explicit local-IP access, offline sample processing and the systemd template and blue service instructions. Live records and synthetic sample state must remain separate.
-
-Implemented: password success/failure parsing, per-IP rolling-window alerts, review/reopen history, restart-persistent records and replay deduplication, configurable rule limits/history, text reports, help/version, a labelled synthetic CLI demo and explicit retention cleanup. The browser supports token login, alert investigation, recent events, configuration and monitor controls. Live journal startup/resumption was checked on Ubuntu; boot startup and bounded crash recovery are verified on blue. Service-aware controls and daily cleanup are deployed and verified on blue. Discord queue/transport tests use a fake endpoint, with separate real delivery and scheduled-sender evidence on blue. Optional [VirusTotal IP reputation](docs/runbook.md#virustotal-ip-reputation) is implemented in source with manual lookup and offline simulation. Live lookup and deployment on blue are pending. The [terminal app](docs/runbook.md#terminal-panel-and-onboarding) opens with bare `heimdall` in an interactive terminal, runs first-use onboarding and an Overview workspace, and leaves only on the exact `/exit` command; it is available in source. SSH blocking remains planned.
-
-The dashboard separates `/overview`, `/investigations`, `/activity` and `/settings`, with direct links and browser history. Its off-white workspace and black navigation use bundled JetBrains Mono fonts, so the interface loads without external font services.
-
-Future panel changes follow the [control panel design guide](docs/control-panel-design.md), including the owner's preference for dark dotted graphics, terminal art and animation.
+See the [status matrix](docs/status.md) for implementation and evidence, the [runbook](docs/runbook.md) for operation, and the [verification index](docs/verification/README.md) for dated results. Faculty acceptance of the Python dashboard bridge remains unconfirmed. The earlier browser simulation is not the Linux monitor.
 
 ## Terminal onboarding
 
-Run `./bin/heimdall` in an interactive terminal (or `./bin/heimdall tui`) to open the keyboard-driven terminal app. The first launch in each state directory runs guided onboarding — prerequisites, SSH journal access and local state — then saves completion explicitly; an existing state directory such as Blue's is adopted unchanged. Later launches open an Overview workspace covering monitor control, investigations with review/reopen, recent events, rules, providers and the offline demo. Leaving requires the exact `/exit` command. It is available in source. [Terminal panel controls](docs/runbook.md#terminal-panel-and-onboarding)
+From a retained release directory on Linux, run `bash scripts/install-cli.sh` once to make `heimdall` available by name for your Bash account. Open a new terminal and run `heimdall --help` for the command list or `heimdall --console` to open the keyboard-driven terminal app.
+
+First launch checks prerequisites and SSH journal access, guides you through local state setup, and saves completion when you confirm. It adopts existing records unchanged. Later launches open Overview, where you can check the monitor, review alerts and open **Rules** to edit the failure threshold, time window or retention. Type `/exit` to leave. [Terminal panel controls](docs/runbook.md#terminal-panel-and-onboarding)
 
 ## Milestone behavior and remaining targets
 
-- Watch SSH login records in the background, start at boot and attempt bounded recovery after a crash.
-- Raise an explainable alert after **four failures from the same IP in a rolling five-minute window**, across usernames.
-- Group a continuous burst until five minutes without another failure. Show the source, timeline, matched rule and recommendations.
-- Summarize a successful login with matching preceding failures for the same user and IP when the data supports it.
-- Offer direct shell commands, a local browser dashboard, and a terminal panel for guided setup and daily checks.
-- Preserve local alert history for **60 days** by default, including review history across restarts. Daily cleanup preserves pending delivery and required supporting evidence. Active-block retention is a future requirement because blocking is not implemented.
-- Send optional Discord webhook messages. Queue failed deliveries and send a grouped list when Discord becomes reachable again.
-- Optionally enrich eligible public IPs with VirusTotal context. Missing results mean unknown, and zero flags mean no flags found. Local processing works offline.
-- Provide a guided demonstration that clearly labels prepared data and simulated actions.
+Heimdall watches SSH login records, explains a configurable alert when four failures from one IP occur within five minutes, and retains local investigation history. Optional Discord delivery and VirusTotal reputation add context without making local monitoring depend on internet access. The guided demo labels synthetic data and actions.
 
-**SSH blocking is the last implementation priority.** It is limited to the test VM and requires a reviewed design plus tested console recovery before activation. The intended block applies only to further SSH connections from the source IP; manual unblock requires confirmation. Reviewing an alert does not unblock it. Internet outages do not trigger quarantine.
+The [milestone plan](docs/college-milestone-plan.md) defines behavior and safety boundaries; the [checklist](checklist.md) tracks acceptance and remaining work. The broader NAS/router design in the [blueprint](HEIMDALL_BLUEPRINT.md) remains planned.
 
 ## Test environment
 
@@ -53,35 +43,9 @@ One MacBook M4 Air with 16 GB RAM hosts two Ubuntu ARM64 virtual machines in Par
 
 Separate outbound connectivity supports Discord and optional VirusTotal. Private VM addresses will not be sent to VirusTotal; the guided reputation demonstration uses labelled simulated results. Blue's observed SSH banner reports Ubuntu 26.04.1 LTS; the live input is `journalctl -u ssh` JSON. See the dated lab evidence and recheck the environment when resuming.
 
-## College milestone stack
-
-| Area | College milestone |
-|---|---|
-| Main language | Linux shell scripts |
-| Supporting tools | Common Linux commands and jq; Python standard-library HTTPS transport |
-| Management | Shell command interface and local browser dashboard |
-| HTTP bridge | Python 3 standard library; no hosted dependencies |
-| Normalization helper | Python standard library for canonical IPs and content fingerprints |
-| Background operation | Linux service manager |
-| Storage | Local files with restricted permissions and safe writes |
-| Notifications | Optional Discord webhook |
-| Reputation context | Optional VirusTotal API v3 with caching and limits |
-| Deployment | Ubuntu ARM64 VMs |
-
-Python is now a prerequisite for the browser bridge, following the owner's scope change. SQLite, Docker Compose and a Python rules engine remain outside this shell-first implementation.
-
 ## Continue the milestone
 
-The core monitor/dashboard, services, retention and Discord are delivered. Use the [current status](docs/status.md), [checklist](checklist.md) and [GitHub backlog](docs/build-backlog.md) for remaining live evidence, open decisions and academic work. The original build sequence was:
-
-1. VM setup, representative SSH logs and sample fixtures.
-2. Live parsing, rolling-window detection and explanations.
-3. Persistent investigations, CLI, browser dashboard and background service.
-4. Discord delivery and outage recovery.
-5. Optional VirusTotal context and readable reports.
-6. Guided demo, evidence and rehearsal; real blocking only after its design and recovery gates pass.
-
-The target is ten working days from project start, not a confirmed submission date. Collect report and test evidence throughout development. Reconcile the deadline, final-report format and title-page dates with the professor when available.
+The milestone uses shell scripts, jq, local files and the Python standard library on Ubuntu ARM64. The [backlog](docs/build-backlog.md) links GitHub Issues; the [checklist](checklist.md) tracks verification, academic work and open decisions. Ten working days is a planning target, not a confirmed submission date.
 
 ## Academic documents
 

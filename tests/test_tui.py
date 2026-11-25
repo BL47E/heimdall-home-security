@@ -175,7 +175,7 @@ class Session:
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
         environment = dict(os.environ, HEIMDALL_DATA_DIR=str(self.data), TERM="xterm-256color")
         self.process = subprocess.Popen(
-            [str(ROOT / "bin/heimdall"), "tui"],
+            [str(ROOT / "bin/heimdall"), "--console"],
             stdin=slave, stdout=slave, stderr=slave, env=environment, close_fds=True,
         )
         os.close(slave)
@@ -289,6 +289,10 @@ class TerminalAppTest(unittest.TestCase):
         # A partial command is not the exact /exit.
         session.send("/exi" + ENTER_KEY)
         session.expect("Unknown command /exi")
+        session.send("//exit" + ENTER_KEY)
+        session.expect("Unknown command /exit")
+        session.send("/exit " + ENTER_KEY)
+        session.expect("Unknown command /exit")
         self.assertTrue(session.alive())
         session.send("/exit" + ENTER_KEY)
         self.assertEqual(session.process.wait(timeout=15), 0)
@@ -385,6 +389,42 @@ class TerminalAppTest(unittest.TestCase):
         self.assertEqual(config["threshold"], 5)
         self.assertEqual(session.quit(), 0)
 
+    def test_rules_screen_edits_only_the_confirmed_setting(self):
+        session = self.launch()
+        self.complete_onboarding(session)
+        session.send(DOWN + DOWN + ENTER_KEY)
+        session.expect("Failure threshold  4")
+        session.send("2")
+        session.expect("Edit window")
+        session.send("600" + ENTER_KEY)
+        session.expect("Set window (seconds) to 600")
+        session.send(ESC)
+
+        session.send("/rules" + ENTER_KEY)
+        session.expect("Window (seconds)  300")
+        session.send("1")
+        session.expect("Edit failure threshold")
+        session.send("-5" + ENTER_KEY)
+        session.expect("using digits 0")
+        session.send("1" + ENTER_KEY)
+        session.expect("Set failure threshold to 1")
+        session.send("y")
+        session.expect("Invalid configuration patch")
+        session.send(ESC)
+
+        session.send("/rules" + ENTER_KEY)
+        session.expect("Failure threshold  4")
+        session.send("3")
+        session.expect("Edit retention")
+        session.send("90" + ENTER_KEY)
+        session.expect("Set retention (days) to 90")
+        session.send("y")
+        session.expect("Configuration applied")
+        state = json.loads((self.data / "state.json").read_text())
+        self.assertEqual(state["config"], {"threshold": 4, "window_seconds": 300, "retention_days": 90})
+        self.assertEqual([change["patch"] for change in state["config_history"]], [{"retention_days": 90}])
+        self.assertEqual(session.quit(), 0)
+
     def test_narrow_screen_shows_guidance_and_stays_controllable(self):
         session = Session(self.data, rows=20, cols=40)
         self.addCleanup(session.close)
@@ -424,14 +464,33 @@ class LauncherTest(unittest.TestCase):
             [str(ROOT / "bin/heimdall")], capture_output=True, text=True, timeout=30,
         )
         self.assertEqual(result.returncode, 0)
-        self.assertIn("Usage: ./bin/heimdall [COMMAND]", result.stdout)
+        self.assertIn("Usage: heimdall [OPTION | COMMAND]", result.stdout)
 
-    def test_noninteractive_tui_refuses_with_guidance(self):
+    def test_explicit_help_lists_console_and_dashboard(self):
         result = subprocess.run(
-            [str(ROOT / "bin/heimdall"), "tui"], capture_output=True, text=True, timeout=30,
+            [str(ROOT / "bin/heimdall"), "--help"], capture_output=True, text=True, timeout=30,
         )
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("needs an interactive terminal", result.stderr)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("--console, tui", result.stdout)
+        self.assertIn("dashboard [OPTIONS]", result.stdout)
+
+    def test_dashboard_command_passes_help_to_the_server(self):
+        result = subprocess.run(
+            [str(ROOT / "bin/heimdall"), "dashboard", "--help"],
+            capture_output=True, text=True, timeout=30,
+        )
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("--host", result.stdout)
+        self.assertIn("--port", result.stdout)
+
+    def test_noninteractive_console_refuses_with_guidance(self):
+        for alias in ("--console", "tui"):
+            with self.subTest(alias=alias):
+                result = subprocess.run(
+                    [str(ROOT / "bin/heimdall"), alias], capture_output=True, text=True, timeout=30,
+                )
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("needs an interactive terminal", result.stderr)
 
 
 if __name__ == "__main__":

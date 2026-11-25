@@ -19,8 +19,10 @@ Machine-readable commands return one JSON value on stdout, with diagnostics on s
 
 | Command | Result and behavior |
 |---|---|
-| `heimdall help` / no arguments | Readable command guide; no state creation. |
-| `heimdall version` | Version text from `VERSION`; no state creation. |
+| `heimdall --help` / `help` | Show the command guide. Bare `heimdall` also shows help when input or output is noninteractive. |
+| `heimdall --console` / `tui` | Open the terminal app. Bare `heimdall` opens it when input and output are terminals. |
+| `heimdall dashboard [OPTIONS]` | Start the local dashboard. Use `dashboard --help` for server options. |
+| `heimdall --version` / `version` | Version text from `VERSION`; no state creation. |
 | `heimdall demo` | Labelled synthetic walkthrough in a newly created separate data directory, retained for inspection. Human-readable output; no live-state mutation or network actions. |
 | `heimdall init` | Idempotently create private state and default configuration; return config object. |
 | `heimdall status` | Return status object described below, including accurate process liveness. |
@@ -100,7 +102,7 @@ State values: `running`, `stopped`, `error`; coverage `available` only after a l
 
 ## Browser API
 
-The server CLI is `python3 web/server.py --host 127.0.0.1 --port 8765`; `--host LOCAL_IP` explicitly enables trusted local-network access. It initializes shell state. It creates/loads a random owner token in a private `web-token` file inside the state directory and prints the path, never the value in request logs or URLs. The owner reads that file locally to sign in. HTTP is for a trusted local lab only; remote/untrusted exposure requires TLS/reverse-proxy design.
+The server CLI is `python3 web/server.py --host 127.0.0.1 --port 8765`; `--host LOCAL_IP` selects a specific local IPv4 address for access from a trusted network. It initializes shell state. It creates/loads a random owner token in a private `web-token` file inside the state directory and prints the path, never the value in request logs or URLs. The owner reads that file locally to sign in. HTTP is for a trusted local lab only; remote/untrusted exposure requires TLS/reverse-proxy design.
 
 | Endpoint | Result |
 |---|---|

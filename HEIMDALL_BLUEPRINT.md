@@ -1,10 +1,16 @@
 # Heimdall: Home Security Overview
 
+## Home deployment target
+
+The primary home deployment is a small Linux network-attached storage (NAS) system. Heimdall runs as a background service on the NAS, where it processes events and keeps records locally. The owner opens the terminal user interface (TUI) directly on the NAS for quick setup and settings changes.
+
+For access away from home, the NAS will serve the same dashboard through Tailscale. The owner will enable Tailscale access on the NAS and open the dashboard from an authorized phone or laptop on the private Tailscale network. Heimdall retains its own dashboard login. Local monitoring and the TUI are usable without Tailscale. [Remote dashboard access is planned](https://github.com/BL47E/heimdall-home-security/issues/16).
+
+The Ubuntu VMs currently provide the lab for development and verification. A physical NAS deployment remains to be verified.
+
 ## College milestone scope amendment
 
-Owner update, 2026-11-04: implement the shell monitor with a local browser dashboard for alert review, monitor control and validated configuration. [ADR 0003](docs/adr/0003-shell-monitor-with-local-dashboard.md) extends the earlier terminal-only decision: shell/jq owns parsing, rules and state, while a Python standard-library HTTP bridge provides authenticated local access. The shell monitor and dashboard are deployed on blue, with boot/crash recovery verified; service-aware controls, daily cleanup and real scheduled Discord delivery were verified on November 17 ([current status](docs/status.md)); the broader architecture below remains future direction. See the [runbook](docs/runbook.md) and [runtime contract](docs/runtime-contract.md). Faculty questions and the separate SSH-blocking approval/recovery gate remain open.
-
-The current college milestone uses shell scripts, commands, a local browser dashboard, local files and two Ubuntu ARM64 VMs; an optional terminal app (bare `heimdall`, guided onboarding, Overview workspace, exact `/exit` to leave) is implemented in source. Its ten-day delivery priorities and planned behavior are recorded in [the college milestone plan](docs/college-milestone-plan.md) and [ADR 0002](docs/adr/0002-shell-first-college-milestone.md). Those documents govern this milestone where they differ from the broader architecture below. The supplied evaluation rubric is mapped in [evaluation alignment](docs/evaluation-alignment.md); the supplied idea template is recorded there, while its applicability to the final report, title-page dates and any separate course requirements remain open for faculty confirmation. Automatic SSH source blocking is a last-priority, VM-only proposal that requires detailed design review and tested recovery before activation. The remaining sections describe the broader product direction, not implemented capabilities.
+The owner extended the shell-first college milestone with a local dashboard on 2026-11-04. [ADR 0003](docs/adr/0003-shell-monitor-with-local-dashboard.md) amends [ADR 0002](docs/adr/0002-shell-first-college-milestone.md); the [milestone plan](docs/college-milestone-plan.md) governs that scope, the [status matrix](docs/status.md) identifies implemented and simulated behavior, and the [runbook](docs/runbook.md) covers operation. Faculty questions and the separate SSH-blocking design and recovery gate remain open. The remaining sections describe the broader planned product.
 
 ## Product direction
 
@@ -129,7 +135,9 @@ External reputation lookups are opt-in. Start with a provider interface and one 
 
 The first release can suggest actions such as reviewing an account or checking a NAS admin page. It must not directly execute actions on the NAS or network. A future response integration would need explicit per-action consent, a preview, a confirmation step, a record of who approved it, and a straightforward recovery path.
 
-## Planned stack
+## Planned stack for broader event collection
+
+The following stack and roadmap describe the broader syslog-based product direction. The Linux NAS deployment target above describes where the existing shell-first service, TUI and dashboard are intended to run.
 
 | Area | Version-one direction | Reason |
 |---|---|---|

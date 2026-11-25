@@ -4,11 +4,9 @@ Source: the owner-provided [“Mini-Project Evaluation Rubrics (30 Marks).docx�
 
 The rubric confirms evaluation criteria, not a feature specification, report template, deadline or permitted technology list. The owner subsequently supplied an idea template, documented below; its applicability to the final report remains unconfirmed. Other requirements remain subject to faculty instructions. Evidence suggestions here are our planning recommendations, not additional faculty requirements. No marks are guaranteed.
 
-## Current implementation evidence — November 17
+## Evidence for the submission
 
-Use the [implementation status matrix](status.md) to connect each claim to code, tests and live evidence. Real SSH threshold/reopening, persistent history, authenticated dashboard, boot/crash recovery, service-aware controls, daily cleanup and owner-approved scheduled Discord delivery now have linked verification. Discord's controlled outage scenario injects a sender-only socket failure; it must not be described as a genuine Discord outage. Additional live rule scenarios and a sender-timer reboot observation remain open.
-
-The report, proposal, Gantt chart, presentation rehearsal and both students' individual contribution records remain unfinished. Existing agent-generated code/evidence does not establish equal student contribution or faculty acceptance. Use dated records to distinguish the VirusTotal source implementation and offline demo from live deployment. SSH blocking remains planned. The supplied faculty originals and their requirements below remain unchanged.
+Use the [implementation status matrix](status.md) to distinguish live results, simulations and open checks for each claim. Cite the dated observation, including the injected sender failure in the Discord recovery demonstration. Record what each student actually contributed. The [acceptance checklist](../checklist.md) tracks the remaining submission work.
 
 ## Criteria and evidence plan
 

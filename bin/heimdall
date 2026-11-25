@@ -6,19 +6,19 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 # Without arguments in an interactive terminal, open the terminal application.
 # Noninteractive invocations keep plain help as the default command.
 if [ $# -eq 0 ] && [ -t 0 ] && [ -t 1 ]; then
-  set -- tui
+  set -- --console
 fi
 case "${1:-help}" in
   help | --help | -h)
     cat <<'HELP'
 Heimdall — explainable local SSH monitoring
 
-Usage: ./bin/heimdall [COMMAND]
+Usage: heimdall [OPTION | COMMAND]
 
-  (no command)                Interactive terminal: open the Heimdall terminal app
-  help                        Show this guide (the noninteractive default)
-  version                     Show the software version
-  tui                         Open the terminal app explicitly (same as no command)
+  --help, -h, help            Show this guide (the noninteractive default)
+  --version, version          Show the software version
+  --console, tui              Open the terminal app (also the interactive default)
+  dashboard [OPTIONS]         Serve the browser dashboard locally; see dashboard --help
   init                        Create private local state
   status                      Show monitor health and alert counts as JSON
   monitor start|stop|run       Control background monitoring, or run foreground
@@ -32,8 +32,10 @@ Usage: ./bin/heimdall [COMMAND]
   config history              Show recorded configuration changes as JSON
   ingest FILE|-               Process journal-shaped samples (synthetic mode)
   cleanup                     Apply configured retention to local records
-  discord COMMAND             Configure optional delivery, enable/disable,
-                              inspect status or flush pending work
+  discord configure           Save a webhook through stdin
+  discord configure-test      Save a test endpoint through stdin
+  discord enable|disable      Turn optional delivery on or off
+  discord status|flush        Check delivery status or send pending notices
   virustotal configure        Save an optional API key through stdin
   virustotal disable|status   Remove the key or show local setup status
   virustotal lookup ID        Look up and store an eligible journal alert's IP
@@ -43,7 +45,7 @@ Usage: ./bin/heimdall [COMMAND]
 Defaults: four failures from one IP within 300 seconds; 60-day retention.
 State: HEIMDALL_DATA_DIR, or ~/.local/state/heimdall (XDG_STATE_HOME supported).
 Requires Bash, jq and Python 3. Live monitoring also requires Ubuntu journalctl.
-Example: ./bin/heimdall config set '{"threshold":4,"window_seconds":300}'
+Example: heimdall config set '{"threshold":4,"window_seconds":300}'
 Review changes do not change SSH access. Blocking remains planned.
 Discord starts disabled; configure its private destination through stdin.
 VirusTotal sends the eligible source IP only when you explicitly request a lookup.
@@ -62,11 +64,18 @@ err() {
   printf '%s\n' "$*" >&2
   exit 1
 }
-if [ "${1:-}" = tui ]; then
-  [ "$#" = 1 ] || err 'Usage: tui'
-  command -v python3 >/dev/null 2>&1 || err 'Python 3 is required for the terminal panel'
-  exec python3 "$ROOT/lib/tui.py" "$ROOT/bin/heimdall" "$DATA"
-fi
+case "${1:-}" in
+  --console | tui)
+    [ "$#" = 1 ] || err 'Usage: heimdall --console'
+    command -v python3 >/dev/null 2>&1 || err 'Python 3 is required for the terminal panel'
+    exec python3 "$ROOT/lib/tui.py" "$ROOT/bin/heimdall" "$DATA"
+    ;;
+  dashboard)
+    shift
+    command -v python3 >/dev/null 2>&1 || err 'Python 3 is required for the dashboard'
+    exec python3 "$ROOT/web/server.py" "$@"
+    ;;
+esac
 command -v jq >/dev/null 2>&1 || err 'jq is required'
 command -v python3 >/dev/null 2>&1 || err 'python3 is required for address validation'
 if [ "${1:-}" = demo ]; then
@@ -240,12 +249,13 @@ case "$cmd" in
     [ "$#" = 1 ] || err 'Usage: ingest FILE|-'
     provenance=fixture
     if [ "$cmd" = _journal_ingest ]; then
-      [ "${HEIMDALL_INTERNAL_MONITOR:-}" = "$(jq -r '.monitor.pid // empty' "$STATE")" ] || err 'Journal ingestion requires the active monitor'
+      [ "${HEIMDALL_MONITOR_LOCK_PID:-}" = "$PPID" ] &&
+        [ "$PPID" = "$(jq -r '.monitor.pid // empty' "$STATE")" ] || err 'Journal ingestion requires the active monitor'
       provenance=journal
     else
       pid=$(jq -r '.monitor.pid // empty' "$STATE")
       if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then err 'Stop live monitoring before fixture ingestion; use a separate data directory for demonstrations'; fi
-      [ "$(jq -r '[.events[] | select(.provenance == "journal")]|length' "$STATE")" = 0 ] || err 'Use a separate data directory for fixtures; live evidence already exists'
+      jq -e '.cursor == null and (any(.events[]; .provenance == "journal") | not)' "$STATE" >/dev/null || err 'Use a separate data directory for fixtures; live evidence already exists'
     fi
     input=$1
     [ "$input" = - ] || [ -r "$input" ] || err 'Input file is unreadable'
@@ -273,7 +283,10 @@ case "$cmd" in
     ;;
   _monitor_state)
     [ "$#" = 1 ] || err 'Missing monitor state'
-    result=$(jq --argjson p "$1" '.monitor = ((.monitor // {}) + $p)' "$STATE")
+    [ "${HEIMDALL_MONITOR_LOCK_PID:-}" = "$PPID" ] || err 'Monitor status updates require the active monitor'
+    result=$(jq --argjson p "$1" '
+      if .mode == "fixture" then error("Use a separate live data directory")
+      else .monitor = ((.monitor // {}) + $p) end' "$STATE")
     printf '%s\n' "$result" | save
     ;;
   cleanup)

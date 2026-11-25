@@ -4,9 +4,11 @@ Read `README.md` and the relevant section of `HEIMDALL_BLUEPRINT.md` before chan
 
 For the current college milestone, read `docs/college-milestone-plan.md`, `checklist.md` and `docs/evaluation-alignment.md` before implementation or academic deliverables. ADR 0002 scopes the shell-first milestone; preserve unresolved faculty questions until answered.
 
-Use the terms in `GLOSSARY.md`. Read applicable decisions in `docs/adr/` before changing product boundaries or deployment choices.
+Use the shared terms in `GLOSSARY.md` and read applicable decisions in `docs/adr/` before changing domain language, product boundaries or deployment choices.
 
 Before adding or changing control-panel pages, components, styling, artwork or interactions under `web/`, read and follow [docs/control-panel-design.md](docs/control-panel-design.md).
+
+When updating `diary.md`, summarize entries more than four calendar days old relative to the update date. Keep dated outcomes, decisions, unresolved questions and links to original evidence. Keep newer entries detailed.
 
 ## Learning and collaboration
 
@@ -21,7 +23,3 @@ Project work is tracked in GitHub Issues. Use `gh` from this repository. See `do
 ### Triage labels
 
 Use the default labels `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, and `wontfix`. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-This is a single-context project with a root glossary and shared ADRs under `docs/adr/`. See `docs/agents/domain.md`.

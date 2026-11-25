@@ -2,12 +2,14 @@
 """Local-only HTTP bridge to the Heimdall shell interface."""
 import argparse
 import hmac
+from ipaddress import IPv4Address
 import json
 import os
 from pathlib import Path
 import re
 import secrets
 import subprocess
+from threading import Lock
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -29,8 +31,15 @@ class Server(ThreadingHTTPServer):
         self.server_name, self.server_port = self.server_address[:2]
 
     def __init__(self, address, cli, data):
-        super().__init__(address, Handler)
+        host, port = address
+        ip = IPv4Address("127.0.0.1" if host == "localhost" else host)
+        if ip.is_unspecified or ip.is_multicast or ip == IPv4Address("255.255.255.255"):
+            raise ValueError("Use a specific local IPv4 address for --host")
+        address = (str(ip), port)
         self.cli, self.data = str(Path(cli).resolve()), Path(data)
+        if self.data.is_symlink():
+            raise ValueError("State directory must not be a symbolic link")
+        super().__init__(address, Handler)
         self.data.mkdir(mode=0o700, parents=True, exist_ok=True)
         os.chmod(self.data, 0o700)
         token_file = self.data / "web-token"
@@ -47,6 +56,7 @@ class Server(ThreadingHTTPServer):
         if not self.token:
             raise ValueError("Empty token file")
         self.sessions, self.attempts = {}, {}
+        self.auth_lock = Lock()
         self.allowed = {f"{address[0]}:{self.server_port}"}
         if address[0] == "127.0.0.1":
             self.allowed.add(f"localhost:{self.server_port}")
@@ -132,16 +142,12 @@ class Handler(BaseHTTPRequestHandler):
             c = SimpleCookie()
             c.load(self.headers.get("Cookie", ""))
             key = c["session"].value if "session" in c else ""
-            now = time.monotonic()
-            expired = [
-                sid
-                for sid, value in list(self.server.sessions.items())
-                if value["expires"] <= now
-            ]
-            for sid in expired:
-                self.server.sessions.pop(sid, None)
-            value = self.server.sessions.get(key)
-            return (value["csrf"] if value else None), key
+            with self.server.auth_lock:
+                value = self.server.sessions.get(key)
+                if value and value["expires"] > time.monotonic():
+                    return value["csrf"], key
+                self.server.sessions.pop(key, None)
+            return None, ""
         except CookieError:
             return None, ""
 
@@ -157,7 +163,7 @@ class Handler(BaseHTTPRequestHandler):
         self.connection.settimeout(5)
         try:
             obj = json.loads(self.rfile.read(int(n)))
-        except (ValueError, TimeoutError):
+        except (ValueError, TimeoutError, RecursionError):
             raise ValueError("Invalid JSON body.")
         if not isinstance(obj, dict):
             raise ValueError("Expected a JSON object.")
@@ -215,28 +221,11 @@ class Handler(BaseHTTPRequestHandler):
                 body = self.body()
             except ValueError as e:
                 return self.fail(400, str(e))
-            addr = self.client_address[0]
-            now = time.monotonic()
-            attempts = [t for t in self.server.attempts.get(addr, []) if now - t < 60]
-            if len(attempts) >= 5:
-                return self.fail(429, "Too many attempts. Try again later.")
-            token = body.get("token")
-            if not isinstance(token, str) or not hmac.compare_digest(
-                token.encode(), self.server.token.encode()
-            ):
-                attempts.append(now)
-                self.server.attempts[addr] = attempts
-                return self.fail(401, "Invalid token.")
-            self.server.attempts.pop(addr, None)
-            key = secrets.token_urlsafe(32)
-            csrf = secrets.token_urlsafe(32)
-            if len(self.server.sessions) >= MAX_SESSIONS:
-                oldest = min(
-                    self.server.sessions,
-                    key=lambda sid: self.server.sessions[sid]["expires"],
-                )
-                self.server.sessions.pop(oldest, None)
-            self.server.sessions[key] = {"csrf": csrf, "expires": now + SESSION_SECONDS}
+            with self.server.auth_lock:
+                status, value = self.login(body.get("token"))
+            if status != 200:
+                return self.fail(status, value)
+            key, csrf = value
             return self.reply(
                 200,
                 {"csrf": csrf},
@@ -256,7 +245,8 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError as e:
                 return self.fail(400, str(e))
         if post and path == "/api/logout":
-            self.server.sessions.pop(key, None)
+            with self.server.auth_lock:
+                self.server.sessions.pop(key, None)
             return self.reply(
                 200,
                 {"ok": True},
@@ -322,6 +312,30 @@ class Handler(BaseHTTPRequestHandler):
             ),
         )
 
+    def login(self, token):
+        addr = self.client_address[0]
+        now = time.monotonic()
+        attempts = [t for t in self.server.attempts.get(addr, []) if now - t < 60]
+        if len(attempts) >= 5:
+            return 429, "Too many attempts. Try again later."
+        try:
+            valid = isinstance(token, str) and hmac.compare_digest(
+                token.encode(), self.server.token.encode()
+            )
+        except UnicodeEncodeError:
+            valid = False
+        if not valid:
+            attempts.append(now)
+            self.server.attempts[addr] = attempts
+            return 401, "Invalid token."
+        self.server.attempts.pop(addr, None)
+        key, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(32)
+        if len(self.server.sessions) >= MAX_SESSIONS:
+            oldest = min(self.server.sessions, key=lambda sid: self.server.sessions[sid]["expires"])
+            self.server.sessions.pop(oldest)
+        self.server.sessions[key] = {"csrf": csrf, "expires": now + SESSION_SECONDS}
+        return 200, (key, csrf)
+
 
 def main():
     p = argparse.ArgumentParser()
@@ -329,13 +343,8 @@ def main():
     p.add_argument("--port", type=int, default=8765)
     p.add_argument("--cli", default=str(ROOT.parent / "bin" / "heimdall"))
     a = p.parse_args()
-    data = os.environ.get(
-        "HEIMDALL_DATA_DIR",
-        str(
-            Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state"))
-            / "heimdall"
-        ),
-    )
+    state_home = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local/state")
+    data = os.environ.get("HEIMDALL_DATA_DIR") or state_home / "heimdall"
     try:
         server = Server((a.host, a.port), a.cli, data)
     except (ValueError, OSError) as e:

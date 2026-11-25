@@ -66,6 +66,7 @@ function showLogin(message = '') {
   selectedId = null;
   selectedSignature = '';
   configDirty = false;
+  $('config').querySelector('button').disabled = false;
   $('app').hidden = true;
   $('login').hidden = false;
   $('logout').hidden = true;
@@ -396,24 +397,32 @@ for (const action of ['start', 'stop'])
       if (currentSession(version)) notice(e.message);
     }
   };
+let configRevision = 0;
 $('config').oninput = () => {
+  configRevision++;
   configDirty = true;
   $('config-state').textContent = 'Unsaved changes';
 };
 $('config').onsubmit = async (e) => {
   e.preventDefault();
-  const body = {},
+  const save = e.target.querySelector('button');
+  if (save.disabled) return;
+  save.disabled = true;
+  const revision = configRevision,
+    body = {},
     version = sessionVersion;
   for (const k of ['threshold', 'window_seconds', 'retention_days'])
     body[k] = Number(e.target.elements[k].value);
   try {
     await api('/api/config', { method: 'POST', body });
-    if (!currentSession(version)) return;
+    if (!currentSession(version) || revision !== configRevision) return;
     configDirty = false;
     $('config-state').textContent = 'Settings saved';
     await refresh();
   } catch (e) {
     if (currentSession(version)) notice(e.message);
+  } finally {
+    if (version === sessionVersion) save.disabled = false;
   }
 };
 async function restoreSession() {

@@ -2,27 +2,21 @@
 
 Current scope: [college milestone](docs/college-milestone-plan.md), [ADR 0002](docs/adr/0002-shell-first-college-milestone.md), the owner's [dashboard extension in ADR 0003](docs/adr/0003-shell-monitor-with-local-dashboard.md) and [evaluation alignment](docs/evaluation-alignment.md). The broader blueprint remains future scope where the milestone overrides it.
 
-Status: CLI and dashboard 0.1.0 are deployed on blue. Live status, preserved alert history, owner authentication and Host-Only access were verified on 2026-11-05; see [the diary](diary.md) and [earlier CLI verification](docs/verification/2026-11-04-cli-blue.md). Real red-to-blue threshold alerting, review reopening and manual console recovery after a monitor crash were verified on 2026-11-07 ([evidence](docs/verification/2026-11-07-red-blue-recovery.md)). Boot startup and bounded automatic systemd crash recovery were verified on blue ([service evidence](docs/verification/2026-11-07-systemd.md)). GitHub Issues are the implementation tracker; see the [build backlog](docs/build-backlog.md). Track actual contribution by both students.
+Use the [status matrix](docs/status.md) for current implementation and dated evidence, and the [build backlog](docs/build-backlog.md) for GitHub Issues. Completed checkboxes record acceptance; open decision tickets remain open until the owner answers them.
 
-Latest recorded checkpoint, November 17 after Discord testing: 136 events, three alerts, four delivered notices in three Discord messages and zero pending notices. Monitoring stayed healthy. See [current status](docs/status.md) and [Discord evidence](docs/verification/2026-11-17-discord.md).
+## Home deployment follow-up
 
-Progress reconciled on 2026-11-17 against the [source checkpoint](docs/verification/2026-11-17-source.md), [live deployment evidence](docs/verification/2026-11-17-deployment.md) and [Discord verification](docs/verification/2026-11-17-discord.md). Planning checkboxes record agreed choices; implementation checkboxes identify their evidence. GitHub decision tickets remain open until owner answers resolve them.
+- [ ] Add [private Tailscale access to the Heimdall dashboard on a Linux NAS](https://github.com/BL47E/heimdall-home-security/issues/16). Verify remote browser access and Heimdall login after restart, plus local monitoring and TUI access when Tailscale is disconnected.
 
 ## Resume the lab
 
 Lab identity after the owner's laptop reset (observed over SSH on November 25): the VMs are now UbuntuBlue (hostname `blueblue`, user `blazeblue`) and UbuntuRed (hostname `blazered`, user `blazered`). Blue is at `10.211.55.9` (Shared) and `10.37.129.8` (Host-Only); red at `10.211.55.10` (Shared) and `10.37.129.9` (Host-Only). The pre-reset addresses in older diary/evidence records no longer respond; historical entries keep their original values.
-- Blue's Heimdall survived the account rename: releases `0.1.0-ecaec12`, `0.1.0-vt` and the November 25 `0.1.0-342daa1` (updated CLI: VirusTotal, terminal app, monitor-start fix; all 82 tests pass on the VM) exist under `/home/blazeblue/heimdall`. The installed monitor/cleanup/Discord units and launcher ran the `0.1.0-vt` preview until the owner requested the switch on November 25; they now run `0.1.0-342daa1`, with the control identity verified and live state preserved ([switch evidence](docs/verification/2026-11-25-service-switch.md)). The monitor is enabled, active and reading `journalctl -u ssh` with available coverage; the cleanup and Discord timers are active.
-- Service-aware CLI/browser controls are deployed. Existing Ubuntu policy denies unprivileged start/stop: the interface shows administrator console instructions and never starts a separate reader. Use `sudo systemctl start|stop|restart heimdall-monitor` in blue's terminal.
-- The daily cleanup timer is installed, has triggered, and the cleanup service completed successfully. State is backed up privately on blue. Blocking remains unimplemented and its recovery gate remains open.
+- The deployed release and services are described in [current status](docs/status.md); use the [runbook](docs/runbook.md) for service controls and recovery. Blocking remains unimplemented and its recovery gate remains open.
 - Per the owner's request on November 25, both VMs disable idle screen locking (`idle-delay 0`) and idle suspend; the screen asks for a password only at explicit logout/login or a manual lock.
 
 ## Panel design and repository cleanup — completed locally and saved
 
-- [x] Create [the control panel design guide](docs/control-panel-design.md), link it from `AGENTS.md`/README and retain the owner's reference image. Use black/off-white, local JetBrains Mono, separate pages, and the stated preference for dark dotted graphics, TUI art and animations.
-- [x] Archive historical guides/proposal artifacts in [docs/archive](docs/archive/README.md); preserve faculty originals, current plans, ADRs and evidence.
-- [x] Verify duplicate hashes before removing two identical template copies and the near-identical second HTML simulation; retain a small documentation index and repair links.
-- [x] Format runtime source and relevant tests without a behavior/design refactor or new runtime dependencies; preserve syntax structure, CSS order, HTML/art and source permissions.
-- [x] Pass all 28 runtime tests, verify the 82 then-current local documentation links and build a package in temporary output; preserve the earlier deployed release archive/checksum. [Issue 14](https://github.com/BL47E/heimdall-home-security/issues/14) is closed.
+- [x] Create the [control panel design guide](docs/control-panel-design.md), archive and deduplicate historical artifacts, and verify formatting, documentation links and packaging. The [archive record](docs/archive/README.md) preserves the deduplication evidence; [issue 14](https://github.com/BL47E/heimdall-home-security/issues/14) is closed.
 - [ ] Address configuration-policy consistency as a separate follow-up; browser session structure and ingestion optimization remain additional survey candidates, not completed refactors.
 
 ## Ready to start
@@ -45,15 +39,7 @@ Lab identity after the owner's laptop reset (observed over SSH on November 25): 
 
 ## Owner-requested browser dashboard — 2026-11-04
 
-- [x] Record the owner's shell-monitor plus local-dashboard scope change in ADR 0003; faculty tool acceptance remains open.
-- [x] Verify the Python standard-library HTTP bridge uses the shell commands for every state mutation (local HTTP integration tests).
-- [x] Verify owner-token login, session handling, CSRF/origin/host checks and private token storage (local HTTP integration tests).
-- [x] Verify distinct Overview/Investigations/Activity/Settings routes, owner login destination, local JetBrains Mono loading, review/reopen/report actions, saved settings and dirty-edit warnings with local synthetic state; see [dashboard verification](docs/verification/2026-11-05-dashboard.md).
-- [x] Verify sign-out and browser-history restoration clear private records, including a delayed alert response arriving after logout (local browser check).
-- [x] Preserve the approved panel appearance during source formatting using syntax/HTML/CSS comparisons; no new visual browser test was performed for the cleanup.
-- [x] Verify live monitor start/stop, status and retained alert history in the deployed blue dashboard over authenticated HTTP.
-- [x] Verify loopback default and explicit Host-Only access on blue at `10.37.129.3:8765`; see [the diary](diary.md).
-- [x] Record which scenarios use synthetic data and which were verified against real Ubuntu SSH records; current runtime tests use synthetic/fake-journal input, not live Ubuntu evidence.
+- [x] Record the scope change in ADR 0003 and verify authentication, routes, security checks and live operations; [dashboard evidence](docs/verification/2026-11-05-dashboard.md) distinguishes synthetic and live scenarios. Faculty tool acceptance remains open.
 
 ## 1. Ubuntu lab and log contract — Day 1
 
@@ -94,8 +80,7 @@ Acceptance: three failures do not alert, the fourth within the window does, expi
 - [x] Align source CLI/browser monitor controls with the fixed systemd unit, identity checks and noninteractive authorization failure handling (local fake-manager/HTTP checks and November 17 live deployment checks).
 - [x] Deploy and verify service-aware CLI/browser controls on blue, including real authorization denial without fallback and administrator stop/start with truthful status ([evidence](docs/verification/2026-11-17-deployment.md)).
 - [x] Implement explicit retention cleanup using configured days and preserving evidence referenced by retained alerts; default 60 days. Local cleanup now preserves pending Discord notifications and their evidence; active blocks remain unimplemented.
-- [x] Provide daily cleanup service/timer templates, pass Ubuntu unit verification and install/enable them on blue; verify a timer trigger and successful service execution.
-- [x] Implement and activate daily 60-day retention, preserving pending notifications and required supporting evidence; synthetic tests cover expired records and pending deliveries.
+- [x] Install and verify daily cleanup, including a timer trigger and successful service execution; synthetic tests cover expiration and pending deliveries.
 - [ ] Preserve active block records when enforcement state is designed and implemented; no blocks exist yet.
 
 Acceptance: background monitoring survives closing the launching terminal or browser; local records survive restart, and future delivery state must also survive. Review changes do not change firewall state. A stopped or failing monitor is never shown as healthy.
