@@ -9,53 +9,80 @@
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
+    <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+      <defs>
+        <pattern id="points" width="4" height="4" patternUnits="userSpaceOnUse">
+          <rect width="2" height="2" fill="white"/>
+        </pattern>
+        <pattern id="stars" width="93" height="47" patternUnits="userSpaceOnUse">
+          <path fill="#888" d="M7 14h1v1H7z M64 6h2v2h-2z M39 37h1v1h-1z"/>
+        </pattern>
+        <symbol id="gate-mark" viewBox="0 0 16 16">
+          <path fill="currentColor" d="M0 2h2v2h2V2h2v5h4V2h2v2h2V2h2v13h-6v-4H6v4H0z"/>
+        </symbol>
+        <g id="tower">
+          <path d="M0 0h6v6h6V0h6v6h6V0h6v16h-3v50H3V16H0z" fill="#bcbcbc"/>
+          <path d="M3 16h24v50H3z" fill="#292929"/>
+          <path d="M4 18h16v48H4z" fill="url(#points)"/>
+          <path d="M10 26h6v12h-6z" fill="black"/>
+          <path d="M1 13h28v3H1z" fill="white"/>
+        </g>
+        <symbol id="watch-gate" viewBox="0 0 320 120">
+          <rect width="320" height="120" fill="url(#stars)"/>
+          <path fill="#aaa" d="M274 14h3v4h4v5h2v9h-3v5h-5v3h-12v-3h-5v-3h8v-2h6v-5h4v-7h-2z"/>
+          <path fill="#222" d="M0 84h12v-5h8v-6h8v-6h8v-5h8v5h7v5h9v7h9v-4h8v-6h9v-5h10v6h8v6h8v5h12v8h79v-8h13v-6h8v-6h9v-7h8v-5h8v5h7v7h11v8h10v-4h9v-5h9v4h7v5h10v-4h8v40H0z"/>
+          <path fill="#555" d="M0 94h24v-3h20v-3h24v3h21v3h18v6h102v-5h18v-4h18v-3h20v3h24v4h31v15H0z"/>
+          <path fill="url(#points)" d="M0 102h24v-3h36v-3h35v5h16v5h94v-5h18v-4h31v3h35v3h31v7H0z"/>
+          <path fill="#999" d="M123 60h8v5h8v-5h8v5h8v-5h8v5h8v-5h8v5h8v-5h9v44h-27V89h-4v-5h-12v5h-4v15h-26z"/>
+          <path fill="url(#points)" d="M124 70h72v6h-72z M130 79h14v25h-14z M175 79h14v25h-14z"/>
+          <use href="#tower" x="104" y="38"/><use href="#tower" x="185" y="38"/>
+          <path fill="#aaa" d="M108 38V16h2v22z M189 38V16h2v22z"/>
+          <path fill="white" d="M110 16h16v3h6v3h-8v3h-14z M191 16h16v3h6v3h-8v3h-14z"/>
+          <path fill="#999" d="M147 104h24v2h-24z M143 109h32v2h-32z M137 115h44v2h-44z"/>
+        </symbol>
+      </defs>
+    </svg>
     <header>
-      <a class="brand" href="/overview">▥ <strong>heimdall</strong></a
-      ><span>Your local SSH watch</span>
+      <a class="brand" href="/overview"><svg aria-hidden="true" viewBox="0 0 16 16"><use href="#gate-mark"/></svg> <strong>heimdall</strong></a
+      ><span>SSH workbench</span>
       <nav aria-label="Workbench">
-        <a href="/overview">Overview</a
-        ><a href="/investigations">Investigations</a
-        ><a href="/activity">Activity</a><a href="/settings">Settings</a>
+        <a href="/overview"><svg aria-hidden="true" viewBox="0 0 12 12"><path d="M0 0h5v5H0z M7 0h5v5H7z M0 7h5v5H0z M7 7h5v5H7z"/></svg>Overview</a>
+        <a href="/investigations"><svg aria-hidden="true" viewBox="0 0 12 12"><path d="M2 0h5v2H2z M0 2h2v5H0z M7 2h2v5H7z M2 7h5v2H2z M7 7h2v2H7z M9 9h2v2H9z M11 11h1v1h-1z"/></svg>Investigations</a>
+        <a href="/activity"><svg aria-hidden="true" viewBox="0 0 12 12"><path d="M0 6h3V3h2V0h2v8h1V5h4v2h-2v3H8v2H5V5H4v3H0z"/></svg>Activity</a>
+        <a href="/settings"><svg aria-hidden="true" viewBox="0 0 12 12"><path d="M0 2h3V0h3v2h6v2H6v2H3V4H0z M0 8h7V6h3v2h2v2h-2v2H7v-2H0z"/></svg>Settings</a>
       </nav>
       <div class="rail-foot">
-        Local SSH watch<br /><button id="logout" hidden>Sign out</button>
+        <button id="logout" hidden>Sign out</button>
       </div>
     </header>
     <main id="main" tabindex="-1">
       <p id="message" role="status" aria-live="polite"></p>
       <section id="login">
-        <!-- prettier-ignore -->
-        <pre class="gate" aria-label="Heimdall gate illustration">    ┌──┐       ┌──┐
-    │░░│ ┌───┐ │░░│
-    │░░├─┤ ▥ ├─┤░░│
-    │░░│ │   │ │░░│
-  ──┴──┴─┴───┴─┴──┴──</pre>
-        <h1>A watchful eye.<br />A clearer picture.</h1>
-        <p>
-          Review SSH activity, understand the evidence and keep your settings
-          close.
-        </p>
-        <form id="login-form">
-          <label for="token">Owner token</label
-          ><input
-            id="token"
-            type="password"
-            required
-            autocomplete="off"
-            placeholder="Your private access token"
-          /><button class="primary">Open workbench</button>
-        </form>
-        <p class="hint">
-          Your token lives in <code>web-token</code> inside your Heimdall data
-          directory. It stays on this system.
-        </p>
+        <div class="login-art"><svg class="gate-art" aria-hidden="true" focusable="false"><use href="#watch-gate"/></svg></div>
+        <div class="login-body">
+          <h1>Owner sign-in</h1>
+          <p>Open your local SSH workbench.</p>
+          <form id="login-form">
+            <label for="token">Owner token</label
+            ><input
+              id="token"
+              type="password"
+              required
+              autocomplete="off"
+              placeholder="Your private access token"
+            /><button class="primary">Open workbench</button>
+          </form>
+          <p class="hint">
+            Your token lives in <code>web-token</code> inside your Heimdall data
+            directory. It stays on this system.
+          </p>
+        </div>
       </section>
       <div id="app" hidden>
         <div id="overview" class="page" hidden>
           <div class="page-heading">
             <div>
               <h1>Security overview</h1>
-              <p>Understand what happened. Decide what comes next.</p>
             </div>
             <span id="freshness">Waiting for status</span>
           </div>
@@ -66,11 +93,11 @@
                 <span id="monitor-badge" class="badge">Unknown</span>
               </h2>
               <div>
-                <button id="start">Start monitor</button>
-                <button id="stop">Stop</button>
+                <button id="start"><i class="pixel-play" aria-hidden="true"></i>Start monitor</button>
+                <button id="stop"><i class="pixel-stop" aria-hidden="true"></i>Stop</button>
               </div>
             </div>
-            <p id="status"></p>
+            <div class="monitor-readout"><p id="status"></p><svg class="gate-art" aria-hidden="true" focusable="false"><use href="#watch-gate"/></svg></div>
             <div id="metrics" class="metrics"></div>
             <div class="panel-foot">
               <span id="mode-label">Checking source</span
@@ -158,10 +185,7 @@
             ><span id="config-state" class="hint"></span>
           </form>
         </section>
-        <footer>
-          heimdall
-          <span>Local evidence. Explainable rules. Owner control.</span>
-        </footer>
+
       </div>
     </main>
   </body>

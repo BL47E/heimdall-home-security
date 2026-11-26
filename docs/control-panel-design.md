@@ -1,6 +1,6 @@
 # Heimdall control panel design guide
 
-Status: owner-approved design direction, recorded 2026-11-05. Applies to every new panel page, component, interaction and change to existing UI under `web/`.
+Status: owner-approved design direction, updated 2026-11-26. Applies to every new panel page, component, interaction and change to existing UI under `web/`.
 
 Use this as the visual source of truth for the control panel. Read it before designing or editing the panel. Preserve these choices as features grow; update the guide when the owner changes the direction. Product scope and behavior remain governed by the milestone documents, glossary and ADRs.
 
@@ -10,20 +10,20 @@ Heimdall is a local SSH security workbench. Its owner should be able to see what
 
 The owner **strongly prefers dark dotted graphics, TUI art and animations**. TUI means a text-based user interface; here, its character comes through monospace lettering, character drawings, brackets, lines and structured rows. These are part of Heimdall's identity, and should be actively considered when designing new features.
 
-Keep the approved black/off-white palette and JetBrains Mono. The earlier yellow and Tokyo Night themes have been superseded.
+Keep the approved white-on-black pixel palette and JetBrains Mono. The earlier yellow and Tokyo Night themes have been superseded.
 
 ## Color and typography
 
 | Role | Value | Use |
 | --- | --- | --- |
-| Paper | `#f2f2ed` | Main workspace and light content surfaces |
-| Ink | `#000000` | Navigation, primary text, principal actions |
-| Console | `#151515` | Dark monitor panels and art surfaces |
-| Muted text | `#666660` | Secondary text on paper |
-| Rule | `#cecec6` | Quiet separators on paper |
-| White | `#ffffff` | Text on dark surfaces and input surfaces |
+| Canvas | `#000000` | Workspace, navigation and input surfaces |
+| Panel | `#101010` | Monitor and sign-in surfaces |
+| Rule | `#383838` | Quiet separators |
+| Edge | `#808080` | Control outlines |
+| Secondary | `#b3b3b3` | Supporting text |
+| White | `#ffffff` | Primary text, pixel marks, focus and principal actions |
 
-Use neutral intermediate grays for borders, selected rows and secondary text on dark surfaces. Meaningful status always includes words or a symbol with a text label; color alone must not carry it. Keep any future semantic accent small and purposeful, without recoloring the base theme.
+Use grayscale throughout. Indicate status with words and selection with a visible marker. Share the pixel gate between sign-in and Overview, with square-dot shading confined to the illustration. Use stepped pixel glyphs on principal actions.
 
 Use **JetBrains Mono throughout**, including headings, forms, navigation, evidence and art. Serve the bundled Regular and Medium fonts from `web/static/fonts/`, retain their OFL license and keep a system monospace fallback. Fonts and graphics must load locally without a CDN or internet connection.
 
@@ -47,7 +47,7 @@ Desktop
 └──────────────────┴───────────────────────────────────────┘
 ```
 
-Use a black navigation rail on desktop and an off-white workspace, with dark consoles where appropriate. On phones, navigation becomes a compact header with readable links, and split views stack vertically. Align content left; align related fields and log columns consistently. Preserve generous task-level spacing and compact spacing within related evidence.
+Use a black navigation rail on desktop and a black workspace, with gray rules to distinguish consoles. On phones, navigation becomes a compact header with readable links, and split views stack vertically. Align content left; align related fields and log columns consistently. Preserve generous task-level spacing and compact spacing within related evidence.
 
 Use real links, a visible current-page indicator and meaningful document titles. Direct loading, reload, login to the requested page and browser Back/Forward must work. Forms should warn before discarding unsaved edits.
 
