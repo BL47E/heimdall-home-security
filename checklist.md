@@ -6,7 +6,11 @@ Use the [status matrix](docs/status.md) for current implementation and dated evi
 
 ## Home deployment follow-up
 
-- [ ] Add [private Tailscale access to the Heimdall dashboard on a Linux system](https://github.com/BL47E/heimdall-home-security/issues/16). Verify remote browser access and Heimdall login after restart, plus local monitoring and TUI access when Tailscale is disconnected.
+- [x] Implement dashboard address discovery in source, with localhost fallback and automatic rebinding when the Tailscale IPv4 address changes. Local supervisor tests cover fallback and address changes; see [status](docs/status.md).
+- [ ] Install and verify the dashboard and monitor service units on the target Linux system. Confirm dashboard startup after boot and that stopping the Heimdall service stops the dashboard.
+- [ ] Verify [private Tailscale dashboard access](https://github.com/BL47E/heimdall-home-security/issues/16) from another device, including owner login, automatic address changes and localhost fallback. Verify monitoring and the terminal app when Tailscale is disconnected.
+- [ ] Deploy and verify the monitoring pause/resume behavior on Linux. Confirm the service and dashboard stay running, paused SSH events are skipped, and the pause survives restart. Source and local tests are complete; live verification remains open.
+- [ ] Verify the Connections view with live SSH activity and perform a fresh browser check from the Mac against the deployed release.
 
 ## Resume the lab
 
@@ -48,7 +52,7 @@ Lab identity after the owner's laptop reset (observed over SSH on November 25): 
 - [ ] Verify fresh console login and recovery for the reviewed SSH-block scenario before enabling any real block.
 - [x] Verify controlled red-to-blue SSH access over Host-Only, including host-key checking and source/destination addresses.
 - [x] Record separate outbound routes through the Shared adapters.
-- [ ] Verify and record separate outbound connectivity where configured.
+- [ ] Recheck and record outbound connectivity on the current VM configuration where configured; the Shared routes were recorded in the earlier lab setup.
 - [x] Inspect real successful and invalid-user failed-password records; identify `journalctl -u ssh`, observed `sshd-session` messages, displayed timestamps/time zone and non-root read access in the tested account.
 - [x] Export structured sanitized successful, invalid-user and existing-account wrong-password samples; fixture documentation records omitted fields and pseudonymized cursors.
 - [x] Document dependencies, startup/shutdown, packaging and optional manual service setup/removal in the runbook; a resolved service instance is now installed and verified on blue.
@@ -74,7 +78,7 @@ Acceptance: three failures do not alert, the fourth within the window does, expi
 - [x] Add alert listing, inspection, review/reopen, review history and simple readable report output (local CLI/HTTP tests).
 - [x] Reopen a reviewed active alert on new failures; a later burst becomes a new alert (synthetic tests).
 - [x] Add shared CLI/browser operations and honest monitoring/provider status (real HTTP-to-CLI tests); the terminal app (bare `heimdall`, onboarding, Overview workspace, exact `/exit`) is implemented in source with pseudo-terminal tests.
-- [x] Implement manual monitor start/stop, singleton prevention, cursor resume and readable failure state; verify live stop/start on blue and fake-journal crash scenarios locally.
+- [x] Implement the original manual monitor start/stop, singleton prevention, cursor resume and readable failure state; verify live stop/start on blue and fake-journal crash scenarios locally. Current source changes the controls to pause/resume; deployment and live verification are tracked above.
 - [x] Provide a manual systemd template with bounded restart settings and runbook instructions; the resolved blue instance is now installed and boot-tested.
 - [x] Install and verify the reviewed systemd setup on blue, including boot startup and bounded recovery after a crash ([2026-11-07 service evidence](docs/verification/2026-11-07-systemd.md)).
 - [x] Align source CLI/browser monitor controls with the fixed systemd unit, identity checks and noninteractive authorization failure handling (local fake-manager/HTTP checks and November 17 live deployment checks).
