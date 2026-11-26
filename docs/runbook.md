@@ -68,6 +68,12 @@ On a standalone installation, stop the background reader with `./bin/heimdall mo
 
 Transaction and monitor locks use an operating-system advisory lock through a small Python standard-library helper. A process crash releases its lock automatically; the next monitor owns and cleans only its known scratch files. Keep `.transaction.lock` and `.monitor.lock` in place while any Heimdall process runs. Never remove locks to bypass an active writer. Mock crash/restart tests establish local behavior. Real blue service crash recovery, retry limiting and boot startup are recorded in [service evidence](verification/2026-11-07-systemd.md).
 
+## Connection observations
+
+Run `heimdall connections` for JSON or open **Connections** from the terminal Overview or dashboard navigation. The terminal also shows established TCP connections to local port 22; an SSH transport can exist before authentication, and alternate SSH ports are not inspected. The dashboard lists retained successful SSH password logins from journal records, newest first, including repeated logins. It cannot identify every device or login method, and an IP may be shared. Select an address to see any available reputation result. Block, time out and limit access are planned controls and do not change access.
+
+If Linux `ss` is unavailable, current connections are reported as unavailable. The view does not configure any network service.
+
 ## Terminal panel and onboarding
 
 From the retained Linux release directory, run `bash scripts/install-cli.sh` as the account that uses Heimdall. It installs a launcher into `~/.local/bin` and registers that directory on the account's Bash command search path. Open a new Bash terminal and run `heimdall --help` from any directory to list the commands. On a service-managed install with an existing launcher, pass that launcher's path to the installer so the named command keeps using the release and state selected for the service.

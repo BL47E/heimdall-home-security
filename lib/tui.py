@@ -145,6 +145,7 @@ class Panel:
         self.heading = curses.A_BOLD
         self.muted = curses.A_DIM
         self.accent = 0
+        self.connection_active = self.connection_previous = 0
         self.normal = 0
         self.selected = curses.A_REVERSE | curses.A_BOLD
         if curses.has_colors() and curses.COLOR_PAIRS >= 3:
@@ -174,6 +175,11 @@ class Panel:
             else:
                 self.muted = self.normal | curses.A_DIM
             self.selected = curses.color_pair(3) | curses.A_BOLD
+            if curses.COLOR_PAIRS >= 7:
+                curses.init_pair(5, curses.COLOR_GREEN, curses.COLOR_BLACK)
+                curses.init_pair(6, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+                self.connection_active = curses.color_pair(5)
+                self.connection_previous = curses.color_pair(6)
         screen.bkgd(" ", self.normal)
 
     # -- data access ---------------------------------------------------------
@@ -317,6 +323,26 @@ Press r in Setup after signing back in. Use your regular login for Heimdall.""")
         self.command(verb, alert["id"])
         status = "needs review" if verb == "reopen" else "reviewed"
         self.show("Review updated", f"Alert {alert['id']} is now {status}. The change is recorded in its history.")
+
+    def open_connections(self):
+        try:
+            data = self.command("connections")
+        except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+            self.show("Connections", str(error))
+            return
+        ssh = data["ssh"]
+        lines = ["SSH — established TCP on local port 22"]
+        if ssh["status"] != "available":
+            lines.append(ssh["message"])
+        for item in ssh["active"]:
+            lines.append("● Connected / " + item["address"])
+        for item in ssh["history"]:
+            lines.append("● Previous login / " + item["address"] + " / " + (item.get("username") or "Unknown user"))
+        if ssh.get("history_message"):
+            lines.append(ssh["history_message"])
+        if ssh["status"] == "available" and not ssh["active"] and not ssh["history"]:
+            lines.append("No current connections or recorded successful logins.")
+        self.show("Connections", "\n".join(lines))
 
     def open_events(self):
         events = self.command("events")
@@ -492,6 +518,7 @@ Press r in Setup after signing back in. Use your regular login for Heimdall.""")
             message = self.alerts_error or "Heimdall lists findings here when a rule matches."
             items.append(Item("No alerts", message, lambda: self.show("Alerts", message)))
         items += [
+            Item("Connections", "Current SSH transports and recorded successful logins.", self.open_connections),
             Item(f"Recent events  /  {counts.get('events', 0)} stored",
                  "Latest SSH observations and their outcomes.", self.open_events),
             Item("Providers  /  Discord " + (self.status.get("providers", {}) or {}).get("discord", "unconfigured").replace("_", " ")
@@ -701,6 +728,10 @@ Press r in Setup after signing back in. Use your regular login for Heimdall.""")
             self.scroll = min(self.scroll, max(0, len(wrapped) - height))
             for line_index, line in enumerate(wrapped[self.scroll:self.scroll + height], 5):
                 self.write(line_index, 2, line, cols - 3)
+                if title == "Connections" and line.startswith("● "):
+                    color = (self.connection_active if line.startswith("● Connected")
+                             else self.connection_previous if line.startswith("● Previous") else self.muted)
+                    self.write(line_index, 2, "●", 1, color)
             self.place_cursor(rows, cols)
             return
 

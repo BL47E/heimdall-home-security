@@ -19,7 +19,7 @@ PROPERTIES = ('LoadState', 'ActiveState', 'SubState', 'MainPID',
               'WorkingDirectory', 'Environment', 'ExecStart', 'User')
 
 
-def call(*args, timeout=1):
+def call(*args, timeout=3):
     return subprocess.run(['systemctl', '--system', '--no-ask-password', *args],
                           capture_output=True, text=True, timeout=timeout)
 

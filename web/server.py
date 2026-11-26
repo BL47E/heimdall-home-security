@@ -186,7 +186,7 @@ class Handler(BaseHTTPRequestHandler):
         ):
             return self.fail(404, "Not found.")
         path = target
-        pages = ("/", "/overview", "/investigations", "/activity", "/settings")
+        pages = ("/", "/overview", "/investigations", "/activity", "/connections", "/settings")
         assets = {
             "/app.js": ("app.js", "text/javascript; charset=utf-8"),
             "/style.css": ("style.css", "text/css; charset=utf-8"),
@@ -262,6 +262,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/status": ["status"],
                 "/api/alerts": ["alerts"],
                 "/api/events": ["events"],
+                "/api/connections": ["connections"],
                 "/api/config": ["config", "get"],
             }.get(path)
         match = re.fullmatch(r"/api/alerts/([^/]+)(?:/(report|review|reopen))?", path)

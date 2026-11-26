@@ -252,12 +252,21 @@ class WebTest(unittest.TestCase):
             "/api/status",
             "/api/alerts",
             "/api/events",
+            "/api/connections",
             "/api/config",
             "/api/alerts/example",
             "/api/alerts/example/report",
         ]:
             with self.subTest(path=path):
                 self.assertEqual(self.request("GET", path)[0], 401)
+
+    def test_connections_page_and_authenticated_endpoint(self):
+        self.assertEqual(self.request("GET", "/connections")[0], 200)
+        self.assertEqual(self.request("GET", "/api/connections")[0], 401)
+        headers = self.login()
+        status, _, body = self.request("GET", "/api/connections", headers=headers)
+        self.assertEqual(status, 200)
+        self.assertEqual(set(json.loads(body)), {"ssh"})
 
     def test_allowlisted_fonts(self):
         for weight in ["Regular", "Medium"]:

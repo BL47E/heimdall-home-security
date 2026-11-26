@@ -20,6 +20,7 @@ with (base / "calls").open("a") as out:
     out.write(json.dumps(args) + "\\n")
 if "show" in args:
     if (base / "hang").exists(): time.sleep(30)
+    if (base / "slow").exists(): time.sleep(1.2)
     print((base / "properties").read_text(), end="")
     sys.exit(0)
 if "start" in args or "stop" in args:
@@ -182,6 +183,11 @@ class ServiceManagerTests(unittest.TestCase):
         self.write_properties("Environment=HEIMDALL_DATA_DIR=" + str(self.data) + "\n")
         self.cli("monitor", "start", ok=False)
         self.assertFalse(any("start" in a for a in self.calls()))
+        self.assert_no_fallback()
+
+    def test_slow_manager_status_is_still_available(self):
+        (self.base / "slow").touch()
+        self.assertEqual(self.cli("status")["monitor"]["manager"], "systemd")
         self.assert_no_fallback()
 
     def test_manager_timeout_is_bounded_and_never_falls_back(self):

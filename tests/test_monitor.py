@@ -45,6 +45,16 @@ class MonitorTests(unittest.TestCase):
             "ingest", "-", data="".join(json.dumps(r) + "\n" for r in records)
         )
 
+    def test_events_all_includes_records_beyond_default_limit(self):
+        self.cli("init")
+        state_file = Path(self.directory.name) / "state.json"
+        state = json.loads(state_file.read_text())
+        state["events"] = [{"id": str(i)} for i in range(205)]
+        state_file.write_text(json.dumps(state))
+        self.assertEqual(len(self.cli("events")), 200)
+        self.assertEqual(len(self.cli("events", "--all")), 205)
+        self.cli("events", "--other", ok=False)
+
     def test_threshold_replay_review_and_success(self):
         events = [self.event(i, 1000 + i * 30, user=f"user{i}") for i in range(4)]
         self.ingest(*events[:3])

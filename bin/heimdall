@@ -23,7 +23,8 @@ Usage: heimdall [OPTION | COMMAND]
   status                      Show monitor health and alert counts as JSON
   monitor start|stop|run       Control background monitoring, or run foreground
   alerts                      List alerts as JSON
-  events                      List the latest observations as JSON
+  events [--all]              List observations as JSON (latest 200 by default)
+  connections                 Show SSH connection observations as JSON
   inspect ID                  Show one alert and its evidence as JSON
   review ID / reopen ID       Update review status and preserve its history
   report ID                   Write a readable investigation to stdout
@@ -105,6 +106,11 @@ save() {
     err 'Cannot replace state'
   }
 }
+# Network observation is read-only and must not hold the state lock during commands.
+if [ "${1:-}" = connections ]; then
+  [ "$#" = 1 ] || err 'Usage: connections'
+  exec python3 "$ROOT/lib/connections.py"
+fi
 # Monitor lifecycle must never hold the state transaction lock while waiting.
 if [ "${1:-}" = monitor ]; then
   if [ "${2:-}" = run ] && [ "${HEIMDALL_MONITOR_LOCK_PID:-}" != "$$" ]; then
@@ -196,8 +202,13 @@ case "$cmd" in
     jq '.alerts | sort_by(.last_seen) | reverse | map(del(.events))' "$STATE"
     ;;
   events)
-    [ "$#" = 0 ] || err 'Usage: events'
-    jq '.events | reverse | .[:200]' "$STATE"
+    if [ "$#" = 0 ]; then
+      jq '.events | reverse | .[:200]' "$STATE"
+    elif [ "$#" = 1 ] && [ "$1" = --all ]; then
+      jq '.events | reverse' "$STATE"
+    else
+      err 'Usage: events [--all]'
+    fi
     ;;
   config)
     sub=${1:-}

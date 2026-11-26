@@ -4,7 +4,9 @@ let csrf = '',
   alerts = [],
   selectedId = null,
   selectedSignature = '',
-  configDirty = false;
+  configDirty = false,
+  selectedConnection = null,
+  connectionSnapshot = null;
 let sessionVersion = 0,
   inspectionVersion = 0;
 const page =
@@ -13,6 +15,7 @@ const page =
     '/overview': 'overview',
     '/investigations': 'investigations',
     '/activity': 'activity',
+    '/connections': 'connections',
     '/settings': 'settings'
   }[location.pathname] || 'overview';
 document.title =
@@ -20,6 +23,7 @@ document.title =
     overview: 'Overview',
     investigations: 'Investigations',
     activity: 'Activity',
+    connections: 'Connections',
     settings: 'Settings'
   }[page] + ' · Heimdall';
 $(page).hidden = false;
@@ -72,6 +76,11 @@ function showLogin(message = '') {
   $('logout').hidden = true;
   $('alerts').replaceChildren();
   $('events').replaceChildren();
+  $('ssh-connections').replaceChildren();
+  $('connection-detail').replaceChildren();
+  $('connection-detail').hidden = true;
+  selectedConnection = null;
+  connectionSnapshot = null;
   $('metrics').replaceChildren();
   emptyDetail();
   $('config').reset();
@@ -253,6 +262,86 @@ async function inspect(id) {
     if (currentSession(version)) notice(e.message);
   }
 }
+function reputationFor(address, findings) {
+  return findings
+    .filter((alert) => alert.source_ip === address && alert.reputation)
+    .map((alert) => alert.reputation)
+    .sort((a, b) => (b.checked_at || 0) - (a.checked_at || 0))[0] || null;
+}
+function connectionAssessment(reputation) {
+  if (!reputation || !Number.isInteger(reputation.flags) || reputation.flags < 0)
+    return ['unknown', 'Unknown'];
+  if (reputation.flags === 0) return ['active', 'No flags found'];
+  if (reputation.flags < 7) return ['previous', reputation.label];
+  return ['bad', reputation.label];
+}
+function showConnection(address, findings) {
+  const detail = $('connection-detail');
+  const reputation = reputationFor(address, findings);
+  const [state, label] = connectionAssessment(reputation);
+  const heading = node('h2', address);
+  const summary = node('p', '', 'connection-reputation');
+  const dot = node('span', '', 'connection-dot ' + state);
+  dot.setAttribute('aria-hidden', 'true');
+  const provenance = reputation && reputation.provenance === 'simulated' ? ' / Simulated' : '';
+  summary.append(dot, document.createTextNode('VirusTotal / ' + label + provenance));
+  detail.replaceChildren(heading, summary);
+  if (reputation && Number.isInteger(reputation.flags))
+    detail.append(node('p', reputation.flags + ' vendors flagged this IP / Checked ' + date(reputation.checked_at)));
+  else detail.append(node('p', 'No available VirusTotal result for this IP.'));
+  detail.append(node('p', 'Actions would apply to this IP address and can affect multiple people or systems.'));
+  const actions = node('div', '', 'connection-actions');
+  for (const label of ['Block', 'Time out', 'Limit access']) {
+    const button = node('button', label);
+    button.type = 'button';
+    button.disabled = true;
+    actions.append(button);
+  }
+  detail.append(node('h3', 'Access controls / Planned'), actions,
+    node('p', 'These controls are not active. Firewall design review and console recovery testing are required before they can change access.'));
+  detail.hidden = false;
+}
+function connectionRow(title, detail, state, findings) {
+  const row = node('button', '', 'connection-row');
+  row.type = 'button';
+  row.dataset.address = title;
+  row.setAttribute('aria-pressed', String(selectedConnection === title));
+  const dot = node('span', '', 'connection-dot ' + state);
+  dot.setAttribute('aria-hidden', 'true');
+  const info = node('span', '', 'connection-detail');
+  const reputation = reputationFor(title, findings);
+  const [assessment, label] = connectionAssessment(reputation);
+  const reputationLine = node('span', '', 'connection-reputation');
+  const reputationDot = node('span', '', 'connection-dot ' + assessment);
+  reputationDot.setAttribute('aria-hidden', 'true');
+  const provenance = reputation && reputation.provenance === 'simulated' ? ' / Simulated' : '';
+  reputationLine.append(reputationDot, document.createTextNode('VirusTotal / ' + label + provenance));
+  info.append(node('span', detail), reputationLine);
+  row.append(dot, node('strong', title, 'connection-name'), info);
+  row.onclick = () => {
+    selectedConnection = title;
+    for (const button of $('ssh-connections').querySelectorAll('button'))
+      button.setAttribute('aria-pressed', String(button.dataset.address === title));
+    showConnection(title, findings);
+  };
+  return row;
+}
+function renderConnections(data, findings) {
+  const ssh = $('ssh-connections');
+  ssh.replaceChildren();
+  for (const item of data.ssh.history)
+    ssh.append(connectionRow(item.address, 'Successful login / ' + (item.username || 'Unknown user') + ' / ' + date(item.timestamp), 'previous', findings));
+  if (data.ssh.history_message) ssh.append(node('p', data.ssh.history_message));
+  if (!data.ssh.history.length && !data.ssh.history_message)
+    ssh.append(node('p', 'No retained successful password logins have been recorded.'));
+  if (selectedConnection && data.ssh.history.some((item) => item.address === selectedConnection))
+    showConnection(selectedConnection, findings);
+  else {
+    selectedConnection = null;
+    $('connection-detail').replaceChildren();
+    $('connection-detail').hidden = true;
+  }
+}
 async function refresh() {
   const version = sessionVersion;
   if (!csrf) return;
@@ -308,6 +397,14 @@ async function refresh() {
         )
           await inspect(selectedId);
       }
+    } else if (page === 'connections') {
+      const [data, findings] = await Promise.all([api('/api/connections'), api('/api/alerts')]);
+      if (!currentSession(version)) return;
+      const snapshot = JSON.stringify([data, findings]);
+      if (snapshot !== connectionSnapshot && !$('ssh-connections').contains(document.activeElement) && !$('connection-detail').contains(document.activeElement)) {
+        connectionSnapshot = snapshot;
+        renderConnections(data, findings);
+      }
     } else if (page === 'activity') {
       const events = await api('/api/events');
       if (!currentSession(version)) return;
@@ -343,6 +440,12 @@ async function refresh() {
     }
   } catch (e) {
     if (currentSession(version)) {
+      if (page === 'connections') {
+        $('ssh-connections').replaceChildren(node('p', 'Connection data unavailable.'));
+        $('connection-detail').replaceChildren();
+        $('connection-detail').hidden = true;
+        connectionSnapshot = null;
+      }
       if (page === 'overview')
         $('freshness').textContent =
           'Connection unavailable / data may be stale';

@@ -566,3 +566,26 @@ nav a:focus-visible {
 .report-link:focus-visible {
   text-decoration: none;
 }
+
+/* Connection states use color and text together on the existing dark surface. */
+.connections-group { margin-top: 32px; border-top: 1px solid var(--rule); padding-top: 22px; }
+.connections-group h2 { display: flex; align-items: center; gap: 12px; }
+.connection-row { display: grid; grid-template-columns: 10px minmax(120px, 1fr) minmax(180px, 2fr); gap: 14px; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--rule); overflow-wrap: anywhere; }
+.connection-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--edge); }
+.connection-dot.active { background: #57d489; }
+.connection-dot.previous { background: #edc658; }
+.connection-name { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.connection-detail { color: var(--muted); font-size: 12px; }
+@media (max-width: 600px) { .connection-row { grid-template-columns: 10px 1fr; } .connection-name { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.connection-detail { grid-column: 2; } }
+
+.connection-row { width: 100%; padding: 15px 14px; text-align: left; background: transparent; color: var(--text); border: 0; border-bottom: 1px solid var(--rule); font-size: 14px; }
+.connection-row:hover, .connection-row[aria-pressed='true'] { background: #242424; color: var(--text); }
+.connection-row[aria-pressed='true'] { box-shadow: inset 3px 0 white; }
+.connection-detail-panel { margin-top: 24px; padding: 20px; border: 1px solid var(--rule); }
+.connection-reputation { display: flex; align-items: center; gap: 10px; }
+.connection-dot.bad { background: #ed7777; }
+
+.connection-detail { display: grid; gap: 8px; }
+.connection-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.connection-actions button:disabled { opacity: .55; cursor: not-allowed; }

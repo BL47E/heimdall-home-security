@@ -433,6 +433,20 @@ class TerminalAppTest(unittest.TestCase):
         self.assertEqual(session.process.wait(timeout=15), 0)
 
 
+class ConnectionViewTest(unittest.TestCase):
+    def test_connection_dialog_shows_ssh_sources(self):
+        panel = tui.Panel.__new__(tui.Panel)
+        panel.command = lambda *args: {
+            "ssh": {"status": "available", "active": [{"address": "10.0.0.1"}], "history": [{"address": "10.0.0.2", "username": "alice"}]},
+        }
+        shown = []
+        panel.show = lambda title, detail: shown.append((title, detail))
+        panel.open_connections()
+        self.assertEqual(shown[0][0], "Connections")
+        self.assertIn("Connected / 10.0.0.1", shown[0][1])
+        self.assertIn("Previous login / 10.0.0.2 / alice", shown[0][1])
+
+
 class RecordTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

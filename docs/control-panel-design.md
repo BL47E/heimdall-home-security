@@ -23,7 +23,7 @@ Keep the approved white-on-black pixel palette and JetBrains Mono. The earlier y
 | Secondary | `#b3b3b3` | Supporting text |
 | White | `#ffffff` | Primary text, pixel marks, focus and principal actions |
 
-Use grayscale throughout. Indicate status with words and selection with a visible marker. Share the pixel gate between sign-in and Overview, with square-dot shading confined to the illustration. Use stepped pixel glyphs on principal actions.
+Use grayscale for the interface, with green and yellow connection dots and green, yellow, red or gray reputation dots accompanied by text labels. Indicate selection with a visible marker. Share the pixel gate between sign-in and Overview, with square-dot shading confined to the illustration. Use stepped pixel glyphs on principal actions.
 
 Use **JetBrains Mono throughout**, including headings, forms, navigation, evidence and art. Serve the bundled Regular and Medium fonts from `web/static/fonts/`, retain their OFL license and keep a system monospace fallback. Fonts and graphics must load locally without a CDN or internet connection.
 
@@ -31,7 +31,7 @@ Use the current scale as the starting point: 32px desktop page headings, 26px on
 
 ## Pages and layout
 
-Each main task has its own page and URL. Keep Overview, Investigations, Activity and Settings as distinct destinations; new major tasks should follow the same pattern. Do not grow the panel into one long page of unrelated sections.
+Each main task has its own page and URL. Keep Overview, Investigations, Activity, Connections and Settings as distinct destinations; new major tasks should follow the same pattern. Do not grow the panel into one long page of unrelated sections.
 
 ```text
 Desktop
