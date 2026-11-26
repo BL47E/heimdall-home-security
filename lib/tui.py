@@ -286,7 +286,7 @@ Press r in Setup after signing back in. Use your regular login for Heimdall.""")
             self.set_monitor("start")
 
     def stop_monitor(self):
-        self.confirm("Stop monitor", "New SSH activity may go unmonitored while the reader is stopped.",
+        self.confirm("Pause monitoring", "SSH activity during the pause is skipped. The service keeps running.",
                      lambda: self.set_monitor("stop"))
 
     def monitor_detail(self):
@@ -297,13 +297,11 @@ Press r in Setup after signing back in. Use your regular login for Heimdall.""")
         if monitor.get("last_error"):
             text += "\n\n" + monitor["last_error"]
         if monitor.get("manager") == "systemd":
-            text += ("\n\nThe Linux service manager owns the SSH reader. If regular controls are denied, "
-                     "an administrator can use these commands on the monitored system:\n\n"
-                     "sudo systemctl start heimdall-monitor.service\n"
-                     "sudo systemctl stop heimdall-monitor.service")
+            text += ("\n\nPausing keeps the Linux service running. An administrator can "
+                     "start or stop the whole service using systemctl on the monitored system.")
         else:
             text += "\n\nFor boot startup, follow the reviewed systemd setup in docs/runbook.md."
-        text += "\n\nStart or stop from the Overview page. Local policy may require an administrator."
+        text += "\n\nPause or resume from the Overview page."
         self.show("Monitor status", text)
 
     def open_investigation(self, alert):
@@ -499,8 +497,8 @@ Press r in Setup after signing back in. Use your regular login for Heimdall.""")
                  f"Coverage {monitor.get('coverage', 'unverified')}    "
                  f"Manager {monitor.get('manager', 'unverified')}",
                  self.monitor_detail),
-            Item("Stop monitor" if state == "running" else "Start monitor",
-                 "Pause collection until restart." if state == "running"
+            Item("Pause monitoring" if state == "running" else "Resume monitoring",
+                 "Skip SSH activity until monitoring resumes." if state == "running"
                  else "Begin reading SSH activity through the monitor command.",
                  self.stop_monitor if state == "running" else self.start_monitor),
             Item(f"Rules  /  {(self.status.get('config') or {}).get('threshold', '?')} failures in "

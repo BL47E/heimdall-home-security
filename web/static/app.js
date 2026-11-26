@@ -353,12 +353,16 @@ async function refresh() {
         s.monitor.state === 'running' && s.monitor.coverage === 'available';
       $('monitor-badge').textContent = healthy
         ? 'Monitoring'
-        : s.monitor.state === 'error'
+        : s.monitor.state === 'paused'
+          ? 'Paused'
+          : s.monitor.state === 'error'
           ? 'Needs attention'
           : 'Not monitoring';
       $('status').textContent =
         s.monitor.last_error ||
-        (healthy
+        (s.monitor.state === 'paused'
+          ? 'Monitoring is paused. SSH activity during this pause is skipped.'
+          : healthy
           ? 'Watching the SSH journal for password authentication activity.'
           : 'Live journal coverage is unavailable. Start the monitor on Ubuntu to watch new activity.');
       $('metrics').replaceChildren(
@@ -490,7 +494,7 @@ $('logout').onclick = async () => {
 $('filter').onchange = render;
 for (const action of ['start', 'stop'])
   $(action).onclick = async () => {
-    if (!confirm((action === 'start' ? 'Start' : 'Stop') + ' the SSH monitor?'))
+    if (!confirm((action === 'start' ? 'Resume SSH monitoring?' : 'Pause SSH monitoring? Activity during the pause will be skipped.')))
       return;
     const version = sessionVersion;
     try {

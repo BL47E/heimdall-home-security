@@ -9,6 +9,17 @@ monitor_command() {
       "$ROOT/bin/heimdall" status
       return
     fi
+    pid=$(jq -r '.monitor.pid // empty' "$STATE")
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null &&
+      ps -p "$pid" -o command= | grep -F "$ROOT/bin/heimdall monitor run" >/dev/null; then
+      "$ROOT/bin/heimdall" _monitor_pause "$action" >/dev/null
+      "$ROOT/bin/heimdall" status
+      return
+    fi
+    if [ "$action" = stop ]; then
+      printf '%s\n' 'HEIMDALL_SERVICE_CONTROL: Monitor service is not running; no monitoring is active' >&2
+      exit 77
+    fi
     manager_info=$(python3 "$ROOT/lib/service.py" "$ROOT" "$DATA" inspect)
     manager=$(printf '%s\n' "$manager_info" | jq -r '.manager')
     if [ "$manager" = unavailable ]; then

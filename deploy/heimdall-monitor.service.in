@@ -3,6 +3,7 @@
 [Unit]
 Description=Heimdall shell SSH monitor
 After=systemd-journald.service
+Wants=heimdall-dashboard.service
 StartLimitIntervalSec=60
 StartLimitBurst=3
 

@@ -119,7 +119,7 @@ Overview, Investigations, Activity and Settings have distinct URLs (`/overview`,
 
 Settings warns before you leave with unsaved edits. The interface uses locally bundled JetBrains Mono, with a system monospace fallback; it needs no external font connection. Sign-out and expired sessions clear the displayed records, and a page restored with Back or Forward checks its session before showing them again.
 
-The dashboard exposes monitoring status, alert evidence, review/reopen, recent events, report downloads and configuration. Start/stop controls operate the monitor, not Ubuntu's SSH service. Discord, reputation enrichment and blocking must show their actual implementation state and must not be presented as active protection.
+The dashboard exposes monitoring status, alert evidence, review/reopen, recent events, report downloads and configuration. The updated source uses the monitoring controls to pause and resume collection. Ubuntu's SSH service continues running. Discord, reputation enrichment and blocking must show their actual implementation state and must not be presented as active protection.
 
 ## Browser access from the trusted local network
 
@@ -155,11 +155,17 @@ python3 web/server.py --host 127.0.0.1 --port 8765
 
 The fixture is synthetic, not an export of blue's journal. Its provenance notes live in `tests/fixtures/README.md`; sample state is labelled in the dashboard. Stop the HTTP server with Ctrl+C. Remove the temporary directory only after confirming it contains solely this disposable demo's state; keep live records and tokens private.
 
+## Monitoring pause and dashboard startup
+
+In the updated source, **Pause monitoring** keeps the monitor service and dashboard running. SSH journal records encountered while paused are skipped, and the saved cursor advances. Resume starts a new coverage window. The pause survives a monitor restart. Run `heimdall monitor stop` and `heimdall monitor start` for the same operations in the terminal. To stop Heimdall itself, use `sudo systemctl stop heimdall-monitor.service` on the Linux machine.
+
+The updated monitor unit requests `heimdall-dashboard.service` when the monitor starts. The dashboard unit is stopped with the monitor service and restarts on failure. Prepare both `deploy/heimdall-monitor.service.in` and `deploy/heimdall-dashboard.service.in` with the same owner, group, release and data directory. The dashboard service obtains the machine's IPv4 address from `tailscale ip -4` at startup and listens on port 8765. If Tailscale is unavailable, the dashboard listens on `127.0.0.1:8765` on the Linux machine. Open `http://TAILSCALE_IP:8765` from an authorized device on the same Tailscale network. The dashboard automatically restarts on address changes. Linux address events trigger an immediate check, with a one-second periodic check for other Tailscale state changes. Existing dashboard sessions must sign in again after a restart. Review both units, then install and enable the monitor unit on the target Linux system. The dashboard unit is pulled in by the monitor unit. These templates are source changes and must be installed and verified on the target before automatic startup is available.
+
 ## Optional manual systemd setup
 
 The current source includes service-aware monitor controls with automatic detection of the fixed `heimdall-monitor.service`. These changes are deployed on blue and have local fake-manager, CLI/HTTP and real service checks. They verify the installed unit's release, state directory and owner, then request noninteractive service control. Without an existing authorization policy, the command fails with a manual `sudo systemctl` instruction. It never stores a sudo password or falls back to an unsupervised monitor. Use the explicit administrator console systemctl commands above on blue; service-aware controls do not add a privilege policy.
 
-`deploy/heimdall-monitor.service.in` is a template requiring per-host review. A resolved instance is installed and enabled on blue, with boot/crash/retry-limit checks recorded in [service evidence](verification/2026-11-07-systemd.md). systemd is Ubuntu's service manager: it can start the monitor at boot and attempt a limited number of restarts after failure. It does not run the dashboard or enable blocking.
+`deploy/heimdall-monitor.service.in` is a template requiring per-host review. A resolved instance is installed and enabled on blue, with boot/crash/retry-limit checks recorded in [service evidence](verification/2026-11-07-systemd.md). systemd is Ubuntu's service manager: it can start the monitor at boot and attempt a limited number of restarts after failure. The deployed unit does not start the dashboard. The updated template requests the separate dashboard unit described above. Neither unit enables blocking.
 
 Before installing, choose the owner account, absolute repository path and private absolute state directory. Replace every `@...@` placeholder, inspect the resulting file and verify its commands manually under that account. The template grants the service journal-read access using `SupplementaryGroups=systemd-journal`; an administrator should review that broader read access. The state directory must already exist and belong to the selected user.
 

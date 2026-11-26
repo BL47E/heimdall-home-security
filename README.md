@@ -49,7 +49,7 @@ The Ubuntu VMs are the current development and test environment. See the [bluepr
 
 ## Current status
 
-The shell monitor, dashboard, terminal app, service controls, daily cleanup and Discord delivery are deployed on blue. The November 25 release passed 82 tests on Ubuntu and the service switch preserved live state. The dashboard starts manually; unprivileged start/stop requests require administrator commands. VirusTotal supports manual lookups and labelled simulation; a live lookup remains unverified. SSH blocking is planned behind a separate design and recovery gate.
+The shell monitor, dashboard, terminal app, service controls, daily cleanup and Discord delivery are deployed on blue. The November 25 release passed 82 tests on Ubuntu and the service switch preserved live state. The deployed dashboard starts manually. Updated source adds a pause control and a dashboard service template, pending installation and verification on blue. VirusTotal supports manual lookups and labelled simulation; a live lookup remains unverified. SSH blocking is planned behind a separate design and recovery gate.
 
 See the [status matrix](docs/status.md) for implementation and evidence, the [runbook](docs/runbook.md) for operation, and the [verification index](docs/verification/README.md) for dated results. Faculty acceptance of the Python dashboard bridge remains unconfirmed. The earlier browser simulation is not the Linux monitor.
 

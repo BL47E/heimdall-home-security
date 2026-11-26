@@ -2,6 +2,10 @@
 
 The latest recorded VM checkpoint is November 25, after the owner’s laptop reset and the service switch to release `0.1.0-342daa1`. Application version is `0.1.0`; see the [lab resume notes](../checklist.md#resume-the-lab) for current names and addresses. Earlier checkpoints and their limitations remain linked below.
 
+## Changes awaiting deployment
+
+Source changes add a persisted monitoring pause and a dashboard systemd template that tracks the local Tailscale IPv4 address and falls back to localhost. These changes require target installation and live verification before they describe blue’s deployed behavior.
+
 ## Implemented and verified
 
 | Capability | Code and tests | Evidence and limits |

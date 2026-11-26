@@ -18,6 +18,7 @@ paths = """
 VERSION
 README.md
 scripts/install-cli.sh
+scripts/start-dashboard.sh
 docs/runbook.md
 docs/runtime-contract.md
 bin/heimdall
@@ -26,11 +27,13 @@ deploy/heimdall-cleanup.timer.in
 deploy/heimdall-discord.service.in
 deploy/heimdall-discord.timer.in
 deploy/heimdall-monitor.service.in
+deploy/heimdall-dashboard.service.in
 docs/adr/0001-home-first-local-first.md
 docs/adr/0002-shell-first-college-milestone.md
 docs/adr/0003-shell-monitor-with-local-dashboard.md
 lib/config-policy.json
 lib/connections.py
+lib/dashboard_supervisor.py
 lib/demo.sh
 lib/discord.sh
 lib/discord_http.py
@@ -48,8 +51,10 @@ tests/fixtures/README.md
 tests/fixtures/password-burst.jsonl
 tests/fixtures/ubuntu-password-sanitized.jsonl
 tests/test_connections.py
+tests/test_dashboard_start.py
 tests/test_discord.py
 tests/test_monitor.py
+tests/test_pause.py
 tests/test_monitor.sh
 tests/test_retention_schedule.py
 tests/test_service.py

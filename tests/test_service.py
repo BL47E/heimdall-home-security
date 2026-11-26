@@ -86,14 +86,12 @@ class ServiceManagerTests(unittest.TestCase):
     def assert_no_fallback(self):
         self.assertFalse((self.base / "forbidden").exists(), "managed instance fell back to a detached process or sudo")
 
-    def test_start_and_stop_use_fixed_noninteractive_unit(self):
+    def test_start_uses_fixed_noninteractive_unit_when_service_is_inactive(self):
         self.cli("monitor", "start")
-        self.cli("monitor", "stop")
         mutations = [args for args in self.calls() if "start" in args or "stop" in args]
-        self.assertEqual(len(mutations), 2)
-        for args, action in zip(mutations, ("start", "stop")):
-            self.assertIn("--no-ask-password", args)
-            self.assertEqual(args[-2:], [action, UNIT])
+        self.assertEqual(len(mutations), 1)
+        self.assertIn("--no-ask-password", mutations[0])
+        self.assertEqual(mutations[0][-2:], ["start", UNIT])
         self.assert_no_fallback()
 
     def test_inactive_and_failed_unit_are_never_healthy(self):
@@ -147,9 +145,9 @@ class ServiceManagerTests(unittest.TestCase):
             self.write_properties()
             monitor = self.cli("status")["monitor"]
             self.assertEqual(monitor["coverage"], "unavailable")
-            self.cli("monitor", "stop")
-            self.assertIsNone(sentinel.poll(), "service stop directly signalled a saved PID")
-            self.assertTrue(any("stop" in args for args in self.calls()))
+            self.cli("monitor", "stop", ok=False)
+            self.assertIsNone(sentinel.poll(), "pause directly signalled an unrelated PID")
+            self.assertFalse(any("stop" in args for args in self.calls()))
         finally:
             sentinel.terminate()
             sentinel.wait(timeout=5)
@@ -162,9 +160,9 @@ class ServiceManagerTests(unittest.TestCase):
 
     def test_permission_denial_never_falls_back(self):
         (self.base / "deny").touch()
-        for action in ("start", "stop"):
-            failure = self.cli("monitor", action, ok=False)
-            self.assertIn("systemctl", failure.stderr)
+        failure = self.cli("monitor", "start", ok=False)
+        self.assertIn("systemctl", failure.stderr)
+        self.cli("monitor", "stop", ok=False)
         self.assert_no_fallback()
 
     def test_wrong_identity_is_rejected_without_mutation(self):

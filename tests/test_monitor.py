@@ -241,7 +241,7 @@ class MonitorTests(unittest.TestCase):
             self.cli("monitor", "start")
             self.assertEqual(len(self.cli("events")), 1)
             self.cli("monitor", "stop")
-            self.assertEqual(self.cli("status")["monitor"]["state"], "stopped")
+            self.assertEqual(self.cli("status")["monitor"]["state"], "paused")
             self.cli("monitor", "start")
             self.assertEqual(len(self.cli("events")), 1)
         finally:

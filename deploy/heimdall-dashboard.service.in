@@ -1,0 +1,22 @@
+# Replace placeholders with the same owner, release and state as the monitor.
+[Unit]
+Description=Heimdall dashboard
+PartOf=heimdall-monitor.service
+After=heimdall-monitor.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=@OWNER@
+Group=@GROUP@
+WorkingDirectory=@REPO_DIR@
+Environment=HEIMDALL_DATA_DIR=@DATA_DIR@
+ExecStart=@REPO_DIR@/scripts/start-dashboard.sh
+Restart=always
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=@DATA_DIR@

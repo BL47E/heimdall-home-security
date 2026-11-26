@@ -21,7 +21,7 @@ Usage: heimdall [OPTION | COMMAND]
   dashboard [OPTIONS]         Serve the browser dashboard locally; see dashboard --help
   init                        Create private local state
   status                      Show monitor health and alert counts as JSON
-  monitor start|stop|run       Control background monitoring, or run foreground
+  monitor start|stop|run       Resume or pause monitoring, or run the service
   alerts                      List alerts as JSON
   events [--all]              List observations as JSON (latest 200 by default)
   connections                 Show SSH connection observations as JSON
@@ -195,7 +195,7 @@ case "$cmd" in
     pid=$(jq -r '.monitor.pid // empty' "$STATE")
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && ps -p "$pid" -o command= | grep -F "$ROOT/bin/heimdall monitor run" >/dev/null; then alive=true; fi
     virustotal_status=$(python3 "$ROOT/lib/virustotal.py" "$DATA" status)
-    jq -L "$ROOT/lib" --argjson now "$(date +%s)" --argjson service "$manager_info" --argjson alive "$alive" --argjson virustotal "$virustotal_status" 'include "notifications"; {monitor:((.monitor // {state:"stopped",pid:null,source:"journalctl -u ssh",last_event_at:null,last_error:null,coverage:"unavailable"}) | if $alive then . else .coverage="unavailable" | .pid=null | if .state=="running" then .state="error" | .last_error="Monitor process exited; coverage unavailable" else . end end | .manager=$service.manager | .service=$service | if $service.manager=="unavailable" then .state="error" | .coverage="unavailable" | .last_error=$service.error elif $service.manager=="systemd" and ($service.active_state!="active" or $service.main_pid!=.pid) then .coverage="unavailable" | .pid=null | .state=(if $service.active_state=="inactive" then "stopped" else "error" end) | .last_error=(if $service.active_state=="inactive" then null else "Monitor service is not active with the recorded process; inspect systemctl status heimdall-monitor.service" end) else . end),counts:{events:(.events|length),alerts:(.alerts|length),needs_review:([.alerts[]|select(.review_status == "needs_review")]|length)},providers:{discord:(discord_summary($now).provider_state),virustotal:$virustotal},discord:discord_summary($now),mode:(.mode // "live"),config:.config}' "$STATE"
+    jq -L "$ROOT/lib" --argjson now "$(date +%s)" --argjson service "$manager_info" --argjson alive "$alive" --argjson virustotal "$virustotal_status" 'include "notifications"; {monitor:((.monitor // {state:"stopped",pid:null,source:"journalctl -u ssh",last_event_at:null,last_error:null,coverage:"unavailable"}) | if $alive then (if ((.paused // false) and .state != "error") then .state="paused" | .coverage="unavailable" else . end) else .coverage="unavailable" | .pid=null | if .state=="running" then .state="error" | .last_error="Monitor process exited; coverage unavailable" else . end end | .manager=$service.manager | .service=$service | if $service.manager=="unavailable" then .state="error" | .coverage="unavailable" | .last_error=$service.error elif $service.manager=="systemd" and ($service.active_state!="active" or $service.main_pid!=.pid) then .coverage="unavailable" | .pid=null | .state=(if $service.active_state=="inactive" then "stopped" else "error" end) | .last_error=(if $service.active_state=="inactive" then null else "Monitor service is not active with the recorded process; inspect systemctl status heimdall-monitor.service" end) else . end),counts:{events:(.events|length),alerts:(.alerts|length),needs_review:([.alerts[]|select(.review_status == "needs_review")]|length)},providers:{discord:(discord_summary($now).provider_state),virustotal:$virustotal},discord:discord_summary($now),mode:(.mode // "live"),config:.config}' "$STATE"
     ;;
   alerts)
     [ "$#" = 0 ] || err 'Usage: alerts'
@@ -262,7 +262,17 @@ case "$cmd" in
     if [ "$cmd" = _journal_ingest ]; then
       [ "${HEIMDALL_MONITOR_LOCK_PID:-}" = "$PPID" ] &&
         [ "$PPID" = "$(jq -r '.monitor.pid // empty' "$STATE")" ] || err 'Journal ingestion requires the active monitor'
+      record=$(cat "$1")
+      cursor=$(printf '%s\n' "$record" | jq -er '.__CURSOR | select(type == "string" and length > 0)') || err 'Journal record has no cursor'
+      stamp=$(printf '%s\n' "$record" | jq -er '.__REALTIME_TIMESTAMP | tonumber') || err 'Journal record has no timestamp'
+      if jq -e --argjson stamp "$stamp" '(.monitor.paused // false) or ($stamp <= (.monitor.resume_after_us // 0))' "$STATE" >/dev/null; then
+        result=$(jq --arg cursor "$cursor" '.cursor = $cursor' "$STATE")
+        printf '%s\n' "$result" | save
+        printf '%s\n' '{"skipped":1}'
+        exit 0
+      fi
       provenance=journal
+      set -- -
     else
       pid=$(jq -r '.monitor.pid // empty' "$STATE")
       if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then err 'Stop live monitoring before fixture ingestion; use a separate data directory for demonstrations'; fi
@@ -273,7 +283,7 @@ case "$cmd" in
     batch=$(mktemp "$DATA/.batch.XXXXXXXX")
     parsed=$(mktemp "$DATA/.parsed.XXXXXXXX")
     malformed=0
-    if [ "$input" = - ]; then cat >"$batch"; else cat "$input" >"$batch"; fi
+    if [ "$provenance" = journal ]; then printf '%s\n' "$record" >"$batch"; elif [ "$input" = - ]; then cat >"$batch"; else cat "$input" >"$batch"; fi
     : >"$parsed"
     while IFS= read -r line || [ -n "$line" ]; do
       if [ ${#line} -gt 65536 ] || ! normalized=$(printf '%s\n' "$line" | jq -ce --arg provenance "$provenance" -f "$ROOT/lib/parse.jq" 2>/dev/null); then
@@ -292,12 +302,29 @@ case "$cmd" in
     rm -f "$batch" "$parsed"
     jq '.stats' "$STATE"
     ;;
+  _monitor_pause)
+    [ "$#" = 1 ] || err 'Usage: _monitor_pause start|stop'
+    case "$1" in start|stop) ;; *) err 'Invalid monitoring action' ;; esac
+    [ "$(jq -r '.mode' "$STATE")" != fixture ] || err 'Use a separate live data directory'
+    if [ "$1" = stop ]; then
+      result=$(jq '.monitor.paused = true | .monitor.coverage = "unavailable" | .sources = {}' "$STATE")
+    elif [ "$(jq -r '.monitor.paused // false' "$STATE")" = false ]; then
+      jq '.monitor' "$STATE"
+      exit 0
+    else
+      # Journal timestamps are microseconds. Retain the cutoff across restarts so
+      # records buffered during a pause cannot be processed after resumption.
+      cutoff=$(python3 -c 'import time; print(time.time_ns() // 1000)')
+      result=$(jq --argjson cutoff "$cutoff" '.monitor.paused = false | .monitor.resume_after_us = $cutoff | .monitor.coverage_since = ($cutoff / 1000000) | .monitor.coverage = "available" | .sources = {}' "$STATE")
+    fi
+    printf '%s\n' "$result" | save
+    ;;
   _monitor_state)
     [ "$#" = 1 ] || err 'Missing monitor state'
     [ "${HEIMDALL_MONITOR_LOCK_PID:-}" = "$PPID" ] || err 'Monitor status updates require the active monitor'
     result=$(jq --argjson p "$1" '
       if .mode == "fixture" then error("Use a separate live data directory")
-      else .monitor = ((.monitor // {}) + $p) end' "$STATE")
+      else .monitor = ((.monitor // {}) + $p) | if (.monitor.paused // false) then .monitor.coverage = "unavailable" else . end end' "$STATE")
     printf '%s\n' "$result" | save
     ;;
   cleanup)
