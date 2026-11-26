@@ -10,6 +10,37 @@ A college project for Linux & Shell Programming (CSET-213).
 
 </div>
 
+## What Heimdall does
+
+Heimdall reads supported SSH password events from the Ubuntu system journal and groups repeated failures into explainable local alerts. By default, four failures from one IP within five minutes trigger an alert. The owner can investigate evidence, record a review, and export a text report through the terminal or authenticated local dashboard.
+
+- **Implemented:** local SSH monitoring, persistent investigations, terminal and browser interfaces, service controls, scheduled retention, and optional Discord notifications.
+- **Simulated:** the isolated demo and VirusTotal example use labelled sample data. Manual VirusTotal lookups are implemented, but a live lookup has not been verified on the lab installation.
+- **Planned:** SSH blocking, NAS deployment and private remote dashboard access. Blocking requires a reviewed design and tested console recovery.
+
+The latest recorded lab deployment is from November 25. See [implementation status](docs/status.md) for evidence and limitations.
+
+## Try the offline demo
+
+From the repository directory, with Bash, `jq` and Python 3 installed, run:
+
+```sh
+./bin/heimdall demo
+```
+
+The demo uses separate synthetic state and needs no credentials or internet connection. For live Ubuntu monitoring, installation, dashboard login and service management, follow the [runbook](docs/runbook.md).
+
+## Checks and deployment
+
+Run the local checks from the repository root:
+
+```sh
+bash tests/test_monitor.sh
+python3 -m unittest discover -s tests
+```
+
+GitHub Actions is enabled for the repository, but no CI workflow is configured yet. CI gates and evidence for manual deployment are being decided in [issue #12](https://github.com/BL47E/heimdall-home-security/issues/12). The [runbook](docs/runbook.md#packaging-a-build-for-the-vm) describes packaging and manual deployment.
+
 ## Home deployment target
 
 Heimdall is intended to run as a background service on a small Linux network-attached storage (NAS) system, with monitoring and records kept on the NAS. For quick setup or settings changes, open the terminal user interface (TUI) directly on the NAS with `heimdall`. For access away from home, the owner will configure Tailscale on the NAS and open the same dashboard in a browser from an authorized phone or laptop. This [private remote access](https://github.com/BL47E/heimdall-home-security/issues/16) is planned.
