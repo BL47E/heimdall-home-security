@@ -20,6 +20,6 @@ Design decisions are tracked separately in [Chart the shell-first college milest
 
 ## Home deployment backlog
 
-- [Provide private Tailscale access to the Heimdall dashboard on a Linux NAS](https://github.com/BL47E/heimdall-home-security/issues/16) — planned follow-up for the home deployment.
+- [Provide private Tailscale access to the Heimdall dashboard on a Linux system](https://github.com/BL47E/heimdall-home-security/issues/16) — planned follow-up for the home deployment.
 
 See [the checklist](../checklist.md) for the ordered acceptance gates and [the milestone plan](college-milestone-plan.md) for scope. Keep real blocking last and preserve final-day rehearsal.

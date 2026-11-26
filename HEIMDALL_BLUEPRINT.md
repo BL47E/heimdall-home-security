@@ -2,11 +2,11 @@
 
 ## Home deployment target
 
-The primary home deployment is a small Linux network-attached storage (NAS) system. Heimdall runs as a background service on the NAS, where it processes events and keeps records locally. The owner opens the terminal user interface (TUI) directly on the NAS for quick setup and settings changes.
+The primary home deployment target is a Linux system, with the distribution still to be selected. Heimdall is intended to run as a background service there and keep its records locally. The owner opens the terminal user interface (TUI) on that system for setup and settings changes.
 
-For access away from home, the NAS will serve the same dashboard through Tailscale. The owner will enable Tailscale access on the NAS and open the dashboard from an authorized phone or laptop on the private Tailscale network. Heimdall retains its own dashboard login. Local monitoring and the TUI are usable without Tailscale. [Remote dashboard access is planned](https://github.com/BL47E/heimdall-home-security/issues/16).
+For access away from home, the Linux system is intended to serve the same dashboard through Tailscale. The owner will enable Tailscale access on that system and open the dashboard from an authorized phone or laptop on the private Tailscale network. Heimdall retains its own dashboard login. Local monitoring and the TUI are usable without Tailscale. [Remote dashboard access is planned](https://github.com/BL47E/heimdall-home-security/issues/16).
 
-The Ubuntu VMs currently provide the lab for development and verification. A physical NAS deployment remains to be verified.
+The Ubuntu VMs currently provide the lab for development and verification. Deployment on a separate home Linux system remains to be verified.
 
 ## College milestone scope amendment
 

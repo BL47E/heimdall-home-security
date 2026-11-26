@@ -214,7 +214,7 @@ case "$cmd" in
       set)
         [ "$#" = 1 ] || err 'Usage: config set JSON'
         patch=$1
-        jq -e -n --argjson p "$patch" '$p | type == "object" and (keys - ["threshold","window_seconds","retention_days"] | length == 0) and (all(to_entries[]; (.value|type) == "number" and (.value|floor) == .value and (if .key == "threshold" then .value >= 2 and .value <= 100 elif .key == "window_seconds" then .value >= 30 and .value <= 3600 else .value >= 1 and .value <= 365 end)))' >/dev/null 2>&1 || err 'Invalid configuration patch'
+        jq -e -n --argjson p "$patch" --slurpfile policies "$ROOT/lib/config-policy.json" '$policies[0] as $bounds | $p | type == "object" and (keys - ($bounds | keys) | length == 0) and (all(to_entries[]; . as $entry | (.value|type) == "number" and (.value|floor) == .value and .value >= $bounds[$entry.key][0] and .value <= $bounds[$entry.key][1]))' >/dev/null 2>&1 || err 'Invalid configuration patch'
         result=$(jq --argjson p "$patch" --argjson now "$(date +%s)" '.config += $p | .config_history = ((.config_history // []) + [{timestamp:$now,patch:$p}])' "$STATE") || err 'Cannot update configuration'
         printf '%s\n' "$result" | save
         jq '.config' "$STATE"

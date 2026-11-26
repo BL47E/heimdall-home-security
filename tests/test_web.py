@@ -1,6 +1,7 @@
 """HTTP integration checks against the actual shell CLI and disposable state."""
 
 import http.client
+from html.parser import HTMLParser
 import importlib.util
 import json
 import os
@@ -92,6 +93,39 @@ class WebTest(unittest.TestCase):
         self.assertEqual(self.request("GET", "/api/config", headers=headers)[0], 200)
         self.assertEqual(self.data.stat().st_mode & 0o777, 0o700)
         self.assertEqual((self.data / "web-token").stat().st_mode & 0o777, 0o600)
+
+    def test_settings_form_limits_match_configuration_policy(self):
+        class SettingsInputs(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.bounds = {}
+
+            def handle_starttag(self, tag, attrs):
+                values = dict(attrs)
+                if tag == "input" and values.get("name") in web.CONFIG_BOUNDS:
+                    self.bounds[values["name"]] = [
+                        int(values["min"]), int(values["max"])
+                    ]
+
+        parser = SettingsInputs()
+        parser.feed((ROOT / "web/static/index.html").read_text())
+        self.assertEqual(parser.bounds, web.CONFIG_BOUNDS)
+
+    def test_configuration_boundaries_agree_with_cli(self):
+        headers = self.login()
+        for key, (minimum, maximum) in web.CONFIG_BOUNDS.items():
+            for value in (minimum - 1, minimum, maximum, maximum + 1):
+                patch = json.dumps({key: value})
+                cli = subprocess.run(
+                    [str(ROOT / "bin/heimdall"), "config", "set", patch],
+                    env={**os.environ, "HEIMDALL_DATA_DIR": str(self.data)},
+                    capture_output=True,
+                )
+                status, _, _ = self.request("POST", "/api/config", patch, headers)
+                expected = minimum <= value <= maximum
+                with self.subTest(key=key, value=value):
+                    self.assertEqual(cli.returncode == 0, expected)
+                    self.assertEqual(status, 200 if expected else 400)
 
     def test_real_alert_review_reopen_and_report(self):
         self.ingest()

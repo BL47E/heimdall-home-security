@@ -29,7 +29,7 @@ Blue passed 82 packaged tests on November 25. The monitor, cleanup and Discord u
 ## Remaining work
 
 1. Capture the additional live detection scenarios above; observe Discord timer startup after a new reboot and a later unattended cleanup/catch-up run.
-2. Resolve configuration-policy consistency and owner decisions on event format, rolling-window/replay semantics and durable recovery. Implementation choices do not close the discussion tickets.
+2. Resolve owner decisions on event format, rolling-window/replay semantics and durable recovery. Implementation choices do not close the discussion tickets.
 3. Agree and implement CI gates and manual deployment evidence. CI means automated repository checks; no GitHub Actions workflow is implemented.
 4. Rehearse the complete final demonstration with the labelled VirusTotal example. Verify a live public-IP lookup separately if needed. Action outcomes in reports remain tied to future enforcement.
 5. Prepare the proposal/report, Gantt chart and presentation; record both students' real contributions. Faculty tool acceptance, final format, title-page dates, deadline and presentation duration remain unconfirmed.

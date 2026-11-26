@@ -14,6 +14,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = Path(__file__).resolve().parent
+CONFIG_BOUNDS = json.loads((ROOT.parent / "lib" / "config-policy.json").read_text())
 ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 LIMIT = 16384
 SESSION_SECONDS = 8 * 60 * 60
@@ -276,15 +277,10 @@ class Handler(BaseHTTPRequestHandler):
         if post and path == "/api/config":
             try:
                 body = self.body()
-                bounds = {
-                    "threshold": (2, 100),
-                    "window_seconds": (30, 3600),
-                    "retention_days": (1, 365),
-                }
                 if not body or any(
-                    k not in bounds
+                    k not in CONFIG_BOUNDS
                     or type(v) is not int
-                    or not bounds[k][0] <= v <= bounds[k][1]
+                    or not CONFIG_BOUNDS[k][0] <= v <= CONFIG_BOUNDS[k][1]
                     for k, v in body.items()
                 ):
                     raise ValueError("Invalid configuration values.")

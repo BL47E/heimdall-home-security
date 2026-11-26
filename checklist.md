@@ -6,7 +6,7 @@ Use the [status matrix](docs/status.md) for current implementation and dated evi
 
 ## Home deployment follow-up
 
-- [ ] Add [private Tailscale access to the Heimdall dashboard on a Linux NAS](https://github.com/BL47E/heimdall-home-security/issues/16). Verify remote browser access and Heimdall login after restart, plus local monitoring and TUI access when Tailscale is disconnected.
+- [ ] Add [private Tailscale access to the Heimdall dashboard on a Linux system](https://github.com/BL47E/heimdall-home-security/issues/16). Verify remote browser access and Heimdall login after restart, plus local monitoring and TUI access when Tailscale is disconnected.
 
 ## Resume the lab
 
@@ -17,7 +17,7 @@ Lab identity after the owner's laptop reset (observed over SSH on November 25): 
 ## Panel design and repository cleanup — completed locally and saved
 
 - [x] Create the [control panel design guide](docs/control-panel-design.md), archive and deduplicate historical artifacts, and verify formatting, documentation links and packaging. The [archive record](docs/archive/README.md) preserves the deduplication evidence; [issue 14](https://github.com/BL47E/heimdall-home-security/issues/14) is closed.
-- [ ] Address configuration-policy consistency as a separate follow-up; browser session structure and ingestion optimization remain additional survey candidates, not completed refactors.
+- [x] Share configuration bounds between the CLI and dashboard, with boundary checks and release packaging. Browser session structure and ingestion optimization remain additional survey candidates.
 
 ## Ready to start
 

@@ -16,7 +16,7 @@ Heimdall reads supported SSH password events from the Ubuntu system journal and 
 
 - **Implemented:** local SSH monitoring, persistent investigations, terminal and browser interfaces, service controls, scheduled retention, and optional Discord notifications.
 - **Simulated:** the isolated demo and VirusTotal example use labelled sample data. Manual VirusTotal lookups are implemented, but a live lookup has not been verified on the lab installation.
-- **Planned:** SSH blocking, NAS deployment and private remote dashboard access. Blocking requires a reviewed design and tested console recovery.
+- **Planned:** SSH blocking, general Linux deployment and private remote dashboard access. Blocking requires a reviewed design and tested console recovery.
 
 The latest recorded lab deployment is from November 25. See [implementation status](docs/status.md) for evidence and limitations.
 
@@ -43,7 +43,7 @@ GitHub Actions is enabled for the repository, but no CI workflow is configured y
 
 ## Home deployment target
 
-Heimdall is intended to run as a background service on a small Linux network-attached storage (NAS) system, with monitoring and records kept on the NAS. For quick setup or settings changes, open the terminal user interface (TUI) directly on the NAS with `heimdall`. For access away from home, the owner will configure Tailscale on the NAS and open the same dashboard in a browser from an authorized phone or laptop. This [private remote access](https://github.com/BL47E/heimdall-home-security/issues/16) is planned.
+Heimdall is intended to run as a background service on a Linux system, with monitoring and records kept on that system. For quick setup or settings changes, open the terminal user interface (TUI) directly on the Linux system with `heimdall`. For access away from home, the owner will configure Tailscale on that system and open the same dashboard in a browser from an authorized phone or laptop. This [private remote access](https://github.com/BL47E/heimdall-home-security/issues/16) is planned; see the [proposed home deployment design](docs/home-deployment-design.md).
 
 The Ubuntu VMs are the current development and test environment. See the [blueprint](HEIMDALL_BLUEPRINT.md) for the home deployment direction.
 
@@ -63,7 +63,7 @@ First launch checks prerequisites and SSH journal access, guides you through loc
 
 Heimdall watches SSH login records, explains a configurable alert when four failures from one IP occur within five minutes, and retains local investigation history. Optional Discord delivery and VirusTotal reputation add context without making local monitoring depend on internet access. The guided demo labels synthetic data and actions.
 
-The [milestone plan](docs/college-milestone-plan.md) defines behavior and safety boundaries; the [checklist](checklist.md) tracks acceptance and remaining work. The broader NAS/router design in the [blueprint](HEIMDALL_BLUEPRINT.md) remains planned.
+The [milestone plan](docs/college-milestone-plan.md) defines behavior and safety boundaries; the [checklist](checklist.md) tracks acceptance and remaining work. The broader home-system design in the [blueprint](HEIMDALL_BLUEPRINT.md) remains planned.
 
 ## Test environment
 

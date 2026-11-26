@@ -29,6 +29,7 @@ deploy/heimdall-monitor.service.in
 docs/adr/0001-home-first-local-first.md
 docs/adr/0002-shell-first-college-milestone.md
 docs/adr/0003-shell-monitor-with-local-dashboard.md
+lib/config-policy.json
 lib/demo.sh
 lib/discord.sh
 lib/discord_http.py
